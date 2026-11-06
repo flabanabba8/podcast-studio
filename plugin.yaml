@@ -1,0 +1,9 @@
+name: podcast-studio
+version: "0.1.0"
+description: "Plan and review source-backed podcasts with a script-bound editorial gate."
+author: "Podcast Studio contributors"
+license: GPL-3.0-or-later
+requires_hermes: ">=0.22.0"
+provides_tools:
+  - podcast_check_script
+  - podcast_check_review
