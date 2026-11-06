@@ -9,3 +9,4 @@
 - A synthetic PageCast caption handoff checks matching original-source fingerprints and rejects a mismatch. The fingerprint cannot detect later edits inside PageCast.
 - A synthetic narration/music file mix verified looped audio, WAV format, duration, private output mode, source preservation, profile opt-in and timeout cleanup without opening an audio device. A separate synthetic PageCast-to-mix-to-video integration passed. No audio was listened to and no loudness or music-balance judgment was made.
 - A temporary ten-minute synthetic silent-track mix passed duration and output checks on CPU. This does not establish realistic music balance, audio quality or performance for every machine.
+- A mocked Inworld response passed through PageCast WAV export and this mixer; the mixer made no additional provider request. No live Inworld request or audio playback was performed by that integration fixture.
