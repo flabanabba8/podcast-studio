@@ -7,3 +7,4 @@ requires_hermes: ">=0.22.0"
 provides_tools:
   - podcast_check_script
   - podcast_check_review
+  - podcast_pagecast_plan
