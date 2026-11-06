@@ -44,9 +44,10 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
         raise ValueError('Provide 1–20 music beds')
     selected, previous_end = [], 0
     for bed in beds:
-        if not isinstance(bed, dict) or set(bed) != {'music_path', 'start_ms', 'end_ms', 'music_db'}:
+        if not isinstance(bed, dict) or not {'music_path', 'start_ms', 'end_ms', 'music_db'} <= set(bed) or not set(bed) <= {'music_path', 'start_ms', 'end_ms', 'music_db', 'fade_in_ms', 'fade_out_ms'}:
             raise ValueError('Each bed needs music_path, start_ms, end_ms and music_db')
         start, end, gain = bed['start_ms'], bed['end_ms'], bed['music_db']
+        fade_in, fade_out = bed.get('fade_in_ms', 0), bed.get('fade_out_ms', 0)
         if type(start) is not int or start < previous_end or start > 7_200_000:
             raise ValueError('Music beds must be ordered and non-overlapping')
         if end is None:
@@ -55,7 +56,9 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
             raise ValueError('Music bed end must follow its start')
         if type(gain) not in (int, float) or not math.isfinite(gain) or not -30 <= gain <= 0:
             raise ValueError('Use music gain -30 to 0 dB')
-        selected.append((media(bed['music_path'], root, allow_profile_media), start, end, gain))
+        if any(type(value) is not int or value < 0 for value in (fade_in, fade_out)) or end is not None and fade_in + fade_out > end-start or end is None and (fade_in or fade_out):
+            raise ValueError('Fades must be nonnegative and fit within the bed')
+        selected.append((media(bed['music_path'], root, allow_profile_media), start, end, gain, fade_in, fade_out))
         previous_end = end if end is not None else 7_200_001
     narration = media(narration_path, root, allow_profile_media)
     sources = [narration] + [item[0] for item in selected]
@@ -80,17 +83,19 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
                     raise ValueError('Audio duration or stream is unsupported')
                 return duration
             duration = probe(narration)
-            if any(end is not None and end > round(duration * 1000) for _, _, end, _ in selected):
+            if any(end is not None and end > round(duration * 1000) for _, _, end, _, _, _ in selected):
                 raise ValueError('Music bed extends beyond narration')
             for path in dict.fromkeys(item[0] for item in selected): probe(path)
             if duration * 48000 * 4 + 1024 > 2 * 1024**3: raise ValueError('WAV output would exceed 2 GiB')
             os.close(os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
             command = [ffmpeg, '-v', 'error', '-nostdin', '-filter_complex_threads', '1', '-protocol_whitelist', 'file,pipe', '-i', str(narration)]
-            for path, _, _, _ in selected: command += ['-stream_loop', '-1', '-protocol_whitelist', 'file,pipe', '-i', str(path)]
+            for path, _, _, _, _, _ in selected: command += ['-stream_loop', '-1', '-protocol_whitelist', 'file,pipe', '-i', str(path)]
             filters = [f'[0:a:0]aresample=48000,volume={voice_db}dB[voice]']
-            for index, (_, start, end, gain) in enumerate(selected, 1):
+            for index, (_, start, end, gain, fade_in, fade_out) in enumerate(selected, 1):
                 length = duration if end is None else (end-start)/1000
                 source = f'[{index}:a:0]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={length:.3f},asetpts=PTS-STARTPTS,volume={gain}dB'
+                if fade_in: source += f',afade=t=in:st=0:d={fade_in/1000:.3f}'
+                if fade_out: source += f',afade=t=out:st={length-fade_out/1000:.3f}:d={fade_out/1000:.3f}'
                 if start:
                     filters.append(f'anullsrc=r=48000:cl=stereo,atrim=duration={start/1000:.3f},asetpts=PTS-STARTPTS[silence{index}]')
                     filters.append(source + f'[music{index}]')

@@ -29,10 +29,9 @@ non-overlapping, ordered intervals in milliseconds. Each selected music file
 loops only within its interval; gaps have no music. For example:
 
 ```json
-{"narration_path":"/path/to/narration.wav","beds":[{"music_path":"/path/to/intro.wav","start_ms":0,"end_ms":30000,"music_db":-18},{"music_path":"/path/to/second.wav","start_ms":30000,"end_ms":60000,"music_db":-20}]}
+{"narration_path":"/path/to/narration.wav","beds":[{"music_path":"/path/to/intro.wav","start_ms":0,"end_ms":30000,"music_db":-18,"fade_in_ms":500,"fade_out_ms":500},{"music_path":"/path/to/second.wav","start_ms":30000,"end_ms":60000,"music_db":-20}]}
 ```
 
-Intervals must fit the narration. There are no automatic fades, crossfades or
-ducking, so check boundaries and balance by listening. Both mix tools use the
+Intervals must fit the narration. Each bed can optionally specify `fade_in_ms` and `fade_out_ms`; their total must fit the bed. There are no automatic fades, crossfades or ducking, so check boundaries and balance by listening. Both mix tools use the
 same private-output, profile opt-in, source-size and timeout limits described
 above.

@@ -38,15 +38,22 @@ class MixTests(unittest.TestCase):
      f.setnchannels(1);f.setsampwidth(2);f.setframerate(8000)
      f.writeframes(b''.join(struct.pack('<h',round(3000*math.sin(i*2*math.pi*freq/8000))) for i in range(8000*seconds)))
    make(voice,3,0);make(low,1,220);make(high,1,440)
-   beds=[{'music_path':str(low),'start_ms':0,'end_ms':1000,'music_db':-12},{'music_path':str(high),'start_ms':1500,'end_ms':2500,'music_db':-12}]
+   beds=[{'music_path':str(low),'start_ms':0,'end_ms':1000,'music_db':-12,'fade_in_ms':200,'fade_out_ms':200},{'music_path':str(high),'start_ms':1500,'end_ms':2500,'music_db':-12}]
    result=mix_timeline(base/'out',str(voice),beds);self.assertEqual(result['beds'],2)
    with wave.open(result['output_path'],'rb') as f:
     def samples(start):
      f.setpos(int(start*48000));data=f.readframes(19200);return struct.unpack('<'+'h'*(len(data)//2),data)[::2]
     first,gap,second=samples(.3),samples(1.1),samples(1.8)
+    def level(start):
+     f.setpos(int(start*48000));data=f.readframes(2400);values=struct.unpack('<'+'h'*(len(data)//2),data)[::2];return sum(abs(x) for x in values)/len(values)
+    early,middle,late=level(.03),level(.45),level(.92)
    def crossings(values):return sum((a<0)!=(b<0) for a,b in zip(values,values[1:]))
    self.assertGreater(crossings(second),crossings(first)*1.5)
    self.assertLess(max(abs(x) for x in gap),20)
+   self.assertLess(early,middle*.6);self.assertLess(late,middle*.6)
+   beds[0]['fade_in_ms']=900;beds[0]['fade_out_ms']=200
+   with self.assertRaisesRegex(ValueError,'Fades'):mix_timeline(base/'out',str(voice),beds)
+   beds[0]['fade_in_ms']=200
    beds[1]['start_ms']=900
    with self.assertRaisesRegex(ValueError,'non-overlapping'):mix_timeline(base/'out',str(voice),beds)
 

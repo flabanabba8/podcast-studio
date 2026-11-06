@@ -11,3 +11,4 @@
 - A temporary ten-minute synthetic mix and a music bed starting at nine minutes passed duration, silent-gap and signal checks on CPU. This does not establish realistic music balance, audio quality or performance for every machine.
 - A mocked Inworld response passed through PageCast WAV export and this mixer; the mixer made no additional provider request. No live Inworld request or audio playback was performed by that integration fixture.
 - A synthetic silent narration with two different tone beds verified the selected intervals, a silent gap, and overlap rejection. No audio device or listening review was used.
+- The two-bed synthetic mix test also checks explicit fade-in and fade-out amplitudes and rejects fades longer than the bed. It does not establish perceptual quality.
