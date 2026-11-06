@@ -24,6 +24,14 @@ class PodcastTest(unittest.TestCase):
   digest = p.check_script(segments)['segments'][0]['sha256']
   review = {'reviewer': 'Fixture', 'segments': [{'sha256': digest, 'purpose': 'Fixture', 'opening_check': 'Fixture', 'source_check': 'Fixture', 'edits': 'None'}]}
   with self.assertRaisesRegex(ValueError, 'one speakable line'): p.pagecast_plan(segments, review)
+ def test_show_notes_use_measured_order_and_deduplicate_sources(self):
+  segments = [{'title': 'First', 'sources': ['Paper'], 'turns': [{'speaker': 'A', 'text': 'Hello.'}]}, {'title': 'Second', 'sources': ['Paper', 'Other'], 'turns': [{'speaker': 'B', 'text': 'World.'}]}]
+  result = p.show_notes(segments, [0, 62])
+  self.assertEqual(result['chapters'], ['0:00 First', '1:02 Second'])
+  self.assertEqual(result['sources'], ['Paper', 'Other'])
+  with self.assertRaises(ValueError): p.show_notes(segments, [0, 0])
+  with self.assertRaises(ValueError): p.show_notes(segments, [0, True])
+
  def test_missing_sources_and_incomplete_review_fail(self):
   segments = [{'title': 'A', 'sources': [], 'turns': [{'speaker': 'A', 'text': 'Hello.'}]}]
   with self.assertRaises(ValueError): p.check_script(segments)

@@ -61,8 +61,31 @@ def pagecast_plan(segments, review):
             'notice': 'Import text into PageCast, inspect every resulting paragraph and assign all of its passage IDs to the listed speaker. PageCast may split turns. Review is self-attested; no speech was generated.'}
 
 
+def show_notes(segments, starts):
+    check_script(segments)
+    if not isinstance(starts, list) or len(starts) != len(segments) or any(type(x) is not int or not 0 <= x <= 86400 for x in starts):
+        raise ValueError('Provide one whole-second chapter start for each segment')
+    if starts[0] != 0 or any(b <= a for a, b in zip(starts, starts[1:])):
+        raise ValueError('Chapter starts must begin at zero and increase')
+    def timestamp(value):
+        h, rem = divmod(value, 3600)
+        m, sec = divmod(rem, 60)
+        return f'{h}:{m:02d}:{sec:02d}' if h else f'{m}:{sec:02d}'
+    chapters, references = [], []
+    for segment, start in zip(segments, starts):
+        title = segment['title'].strip()
+        if any(ord(c) < 32 for c in title): raise ValueError('Chapter titles must be single-line printable text')
+        chapters.append(f'{timestamp(start)} {title}')
+        for source in segment['sources']:
+            if any(ord(c) < 32 for c in source): raise ValueError('Source references must be single-line printable text')
+            if source not in references: references.append(source)
+    return {'chapters': chapters, 'sources': references,
+            'notice': 'Times and source references are supplied by the caller, not verified against audio or source content.'}
+
+
 TOOLS = {
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
+    'podcast_show_notes': ('Prepare chapter labels and deduplicated source references from caller-supplied measured start times; does not inspect audio or verify sources.', {'segments': {'type': 'array'}, 'starts': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}, ['segments', 'starts']),
     'podcast_pagecast_plan': ('Prepare reviewed dialogue for optional PageCast import with an explicit paragraph-to-speaker map. Does not render audio.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
     'podcast_check_review': ('Check a supplied full editorial review covers the current exact segments. Review is self-attested.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
 }
@@ -70,7 +93,7 @@ TOOLS = {
 
 def invoke(name, args):
     try:
-        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan}[name](**args))
+        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_show_notes': show_notes}[name](**args))
     except (TypeError, KeyError, ValueError) as exc:
         return json.dumps({'error': str(exc)})
 
