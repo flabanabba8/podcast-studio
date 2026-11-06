@@ -1,5 +1,7 @@
 # Verification
 
+- Native Windows Python 3.14 passed a synthetic script-planning check and confirmed that mixing reports its unsupported POSIX-locking requirement. No Windows audio was produced or heard.
+
 - Unit checks cover missing sources, incomplete reviews, and stale review detection when dialogue or source references change.
 - Hermes manifest validation, Plugin Doctor, and actual runtime skill discovery passed.
 - A private CPU-only integration fixture used the review-bound handoff to import two synthetic turns into PageCast Director, assigned distinct Flite voices, rendered and exported WAV. It did not use a GPU, contact a hosted voice service, or play or listen to the output. A separate longer-turn test confirmed PageCast split one turn into multiple passages with the same paragraph index. PageCast is a separate optional plugin and speaker assignment must be checked.
