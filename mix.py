@@ -90,7 +90,13 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
             filters = [f'[0:a:0]aresample=48000,volume={voice_db}dB[voice]']
             for index, (_, start, end, gain) in enumerate(selected, 1):
                 length = duration if end is None else (end-start)/1000
-                filters.append(f'[{index}:a:0]aresample=48000,atrim=duration={length:.3f},asetpts=PTS-STARTPTS,volume={gain}dB,adelay={start}:all=1[bed{index}]')
+                source = f'[{index}:a:0]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={length:.3f},asetpts=PTS-STARTPTS,volume={gain}dB'
+                if start:
+                    filters.append(f'anullsrc=r=48000:cl=stereo,atrim=duration={start/1000:.3f},asetpts=PTS-STARTPTS[silence{index}]')
+                    filters.append(source + f'[music{index}]')
+                    filters.append(f'[silence{index}][music{index}]concat=n=2:v=0:a=1[bed{index}]')
+                else:
+                    filters.append(source + f'[bed{index}]')
             filters.append('[voice]' + ''.join(f'[bed{i}]' for i in range(1,len(selected)+1)) + f'amix=inputs={len(selected)+1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0[out]')
             command += ['-filter_complex', ';'.join(filters), '-map', '[out]', '-t', str(duration), '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2', '-threads', '1', '-map_metadata', '-1', '-map_chapters', '-1', '-fs', str(2 * 1024**3), '-y', str(partial)]
             result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, timeout=120, check=False)
