@@ -36,4 +36,4 @@ Intervals must fit the narration. Each bed can optionally specify `fade_in_ms` a
 same private-output, profile opt-in, source-size and timeout limits described
 above.
 
-Windows tests used synthetic media and did not verify Windows ACLs, perceptual quality, or real episodes. PageCast Director itself remains Linux-only. Review the output directory’s access controls.
+Windows tests used synthetic media and did not verify Windows ACLs, perceptual quality, or real episodes. The Windows PageCast handoff was tested with a mocked provider, not live speech. Review the output directory’s access controls.
