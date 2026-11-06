@@ -11,3 +11,4 @@ provides_tools:
   - podcast_show_notes
   - podcast_caption_cues
   - podcast_mix
+  - podcast_mix_timeline

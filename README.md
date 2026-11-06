@@ -23,3 +23,16 @@ Example `podcast_mix` arguments, using files you selected and have rights to use
 For a PageCast output inside the active profile's plugin-data directory, add
 `"allow_profile_media":true`. This opt-in does not allow unrelated profile
 configuration files.
+
+For different beds across an episode, `podcast_mix_timeline` accepts 1–20
+non-overlapping, ordered intervals in milliseconds. Each selected music file
+loops only within its interval; gaps have no music. For example:
+
+```json
+{"narration_path":"/path/to/narration.wav","beds":[{"music_path":"/path/to/intro.wav","start_ms":0,"end_ms":30000,"music_db":-18},{"music_path":"/path/to/second.wav","start_ms":30000,"end_ms":60000,"music_db":-20}]}
+```
+
+Intervals must fit the narration. There are no automatic fades, crossfades or
+ducking, so check boundaries and balance by listening. Both mix tools use the
+same private-output, profile opt-in, source-size and timeout limits described
+above.

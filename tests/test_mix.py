@@ -12,7 +12,7 @@ from unittest.mock import patch
 import wave
 
 root=Path(__file__).resolve().parents[1];spec=importlib.util.spec_from_file_location('podcast_mix_fixture',root/'__init__.py',submodule_search_locations=[str(root)]);p=importlib.util.module_from_spec(spec);sys.modules[spec.name]=p;spec.loader.exec_module(p)
-from podcast_mix_fixture.mix import mix, media
+from podcast_mix_fixture.mix import mix, mix_timeline, media
 
 class MixTests(unittest.TestCase):
  @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'ffmpeg and ffprobe required')
@@ -29,6 +29,27 @@ class MixTests(unittest.TestCase):
    with wave.open(str(output),'rb') as f:
     self.assertEqual((f.getnchannels(),f.getframerate()),(2,48000));f.setpos(72000);self.assertTrue(any(f.readframes(4000)))
    self.assertEqual(before,[x.read_bytes() for x in (narration,music)]);self.assertFalse(list((base/'out').glob('*.partial.wav')))
+ @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'ffmpeg and ffprobe required')
+ def test_distinct_non_overlapping_music_beds(self):
+  with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
+   base=Path(tmp);voice=base/'voice.wav';low=base/'low.wav';high=base/'high.wav'
+   def make(path,seconds,freq):
+    with wave.open(str(path),'wb') as f:
+     f.setnchannels(1);f.setsampwidth(2);f.setframerate(8000)
+     f.writeframes(b''.join(struct.pack('<h',round(3000*math.sin(i*2*math.pi*freq/8000))) for i in range(8000*seconds)))
+   make(voice,3,0);make(low,1,220);make(high,1,440)
+   beds=[{'music_path':str(low),'start_ms':0,'end_ms':1000,'music_db':-12},{'music_path':str(high),'start_ms':1500,'end_ms':2500,'music_db':-12}]
+   result=mix_timeline(base/'out',str(voice),beds);self.assertEqual(result['beds'],2)
+   with wave.open(result['output_path'],'rb') as f:
+    def samples(start):
+     f.setpos(int(start*48000));data=f.readframes(19200);return struct.unpack('<'+'h'*(len(data)//2),data)[::2]
+    first,gap,second=samples(.3),samples(1.1),samples(1.8)
+   def crossings(values):return sum((a<0)!=(b<0) for a,b in zip(values,values[1:]))
+   self.assertGreater(crossings(second),crossings(first)*1.5)
+   self.assertLess(max(abs(x) for x in gap),20)
+   beds[1]['start_ms']=900
+   with self.assertRaisesRegex(ValueError,'non-overlapping'):mix_timeline(base/'out',str(voice),beds)
+
  def test_private_profile_opt_in_and_gain_validation(self):
   with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
    data=Path(tmp)/'profile'/'plugin-data';root=data/'podcast-studio';root.mkdir(parents=True);audio=data/'pagecast'/'audio.wav';audio.parent.mkdir();audio.write_bytes(b'fixture')
