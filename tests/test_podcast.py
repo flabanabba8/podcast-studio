@@ -12,7 +12,7 @@ class PodcastTest(unittest.TestCase):
   digest = p.check_script(segments)['segments'][0]['sha256']
   review = {'reviewer': 'editor', 'segments': [{'sha256': digest, 'purpose': 'Explain finding', 'opening_check': 'Names the result', 'source_check': 'Compared with paper', 'edits': 'Clarified the setup'}]}
   self.assertEqual(p.check_review(segments, review)['status'], 'review_record_matches_script')
-  self.assertEqual(p.pagecast_plan(segments, review)['assignments'], [{'paragraph': 0, 'speaker': 'A'}])
+  self.assertEqual(p.pagecast_plan(segments, review)['assignments'], [{'paragraph': 0, 'speaker': 'A', 'segment_index': 0}])
   segments[0]['turns'][0]['text'] += ' Changed.'
   with self.assertRaisesRegex(ValueError, 'changed'): p.check_review(segments, review)
   with self.assertRaisesRegex(ValueError, 'changed'): p.pagecast_plan(segments, review)

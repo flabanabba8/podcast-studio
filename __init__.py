@@ -46,14 +46,14 @@ def check_review(segments, review):
 def pagecast_plan(segments, review):
     check_review(segments, review)
     lines, assignments = [], []
-    for segment in segments:
+    for segment_index, segment in enumerate(segments):
         for turn in segment['turns']:
             text, speaker = turn['text'].strip(), turn['speaker'].strip()
             if text.splitlines() != [text] or not any(c.isalnum() for c in text):
                 raise ValueError('Each PageCast turn must be one speakable line')
             if len(speaker) > 80 or any(ord(c) < 32 for c in speaker):
                 raise ValueError('PageCast speakers must be at most 80 printable characters')
-            assignments.append({'paragraph': len(lines), 'speaker': speaker})
+            assignments.append({'paragraph': len(lines), 'speaker': speaker, 'segment_index': segment_index})
             lines.append(text)
     if len(lines) > 1000 or sum(len(line) + 1 for line in lines) > 1_000_000:
         raise ValueError('PageCast draft exceeds the turn or character limit')
