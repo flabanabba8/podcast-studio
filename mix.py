@@ -106,10 +106,10 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
                     filters.append(f'[silence{index}][music{index}]concat=n=2:v=0:a=1[bed{index}]')
                 else:
                     filters.append(source + f'[bed{index}]')
-            filters.append('[voice]' + ''.join(f'[bed{i}]' for i in range(1,len(selected)+1)) + f'amix=inputs={len(selected)+1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0[out]')
+            filters.append('[voice]' + ''.join(f'[bed{i}]' for i in range(1,len(selected)+1)) + f'amix=inputs={len(selected)+1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0:latency=1[out]')
             command += ['-filter_complex', ';'.join(filters), '-map', '[out]', '-t', str(duration), '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2', '-threads', '1', '-map_metadata', '-1', '-map_chapters', '-1', '-fs', str(2 * 1024**3), '-y', str(partial)]
             result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, timeout=120, check=False)
-            if result.returncode or not partial.stat().st_size: raise RuntimeError('Audio mix failed')
+            if result.returncode or not partial.stat().st_size: raise RuntimeError('Audio mix failed; verify FFmpeg supports limiter latency compensation')
             actual = probe(partial)
             if abs(actual-duration) > 0.25: raise RuntimeError('Mixed audio duration does not match narration')
             if before != [identity(path) for path in sources]: raise RuntimeError('An input changed during mixing; output discarded')

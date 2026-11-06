@@ -57,6 +57,19 @@ class MixTests(unittest.TestCase):
    beds[1]['start_ms']=900
    with self.assertRaisesRegex(ValueError,'non-overlapping'):mix_timeline(base/'out',str(voice),beds)
 
+ @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'ffmpeg and ffprobe required')
+ def test_limiter_compensates_synthetic_narration_delay(self):
+  with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
+   base=Path(tmp);voice=base/'voice.wav';music=base/'music.wav'
+   with wave.open(str(voice),'wb') as f:
+    f.setnchannels(1);f.setsampwidth(2);f.setframerate(8000);f.writeframes(b'\0\0'*8000+struct.pack('<h',12000)*80+b'\0\0'*(8000-80))
+   with wave.open(str(music),'wb') as f:f.setnchannels(1);f.setsampwidth(2);f.setframerate(8000);f.writeframes(b'\0\0'*8000)
+   result=mix(base/'out',str(voice),str(music))
+   with wave.open(result['output_path'],'rb') as f:
+    data=f.readframes(f.getnframes());samples=struct.unpack('<'+'h'*(len(data)//2),data)[::2]
+   onset=next(i for i,value in enumerate(samples) if abs(value)>1000)/48000
+   self.assertLess(abs(onset-1),.002)
+
  def test_private_profile_opt_in_and_gain_validation(self):
   with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
    data=Path(tmp)/'profile'/'plugin-data';root=data/'podcast-studio';root.mkdir(parents=True);audio=data/'pagecast'/'audio.wav';audio.parent.mkdir();audio.write_bytes(b'fixture')

@@ -12,3 +12,4 @@
 - A mocked Inworld response passed through PageCast WAV export and this mixer; the mixer made no additional provider request. No live Inworld request or audio playback was performed by that integration fixture.
 - A synthetic silent narration with two different tone beds verified the selected intervals, a silent gap, and overlap rejection. No audio device or listening review was used.
 - The two-bed synthetic mix test also checks explicit fade-in and fade-out amplitudes and rejects fades longer than the bed. It does not establish perceptual quality.
+- A synthetic narration impulse was about 4.8 ms late with the limiter default; enabling FFmpeg latency compensation brought the tested onset within 2 ms. This is not a general synchronization or listening-quality guarantee.
