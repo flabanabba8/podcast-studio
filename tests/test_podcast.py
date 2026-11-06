@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -21,5 +22,16 @@ class PodcastTest(unittest.TestCase):
   with self.assertRaises(ValueError): p.check_script(segments)
   segments[0]['sources'] = ['Paper']
   with self.assertRaises(ValueError): p.check_review(segments, {'reviewer': 'editor', 'segments': []})
+
+ def test_registered_skill_and_handler(self):
+  class Context:
+   def __init__(self): self.skills = []; self.tools = {}
+   def register_skill(self, name, path, **kwargs): self.skills.append((name, path))
+   def register_tool(self, **kwargs): self.tools[kwargs['name']] = kwargs
+  ctx = Context(); p.register(ctx)
+  self.assertEqual(len(ctx.skills), 1)
+  self.assertTrue(ctx.skills[0][1].is_file())
+  result = json.loads(ctx.tools['podcast_check_script']['handler']({'segments': [{'title': 'Test', 'sources': ['Paper'], 'turns': [{'speaker': 'Host', 'text': 'A finding.'}]}]}))
+  self.assertNotIn('error', result)
 
 if __name__ == '__main__': unittest.main()
