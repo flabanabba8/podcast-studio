@@ -29,6 +29,8 @@ class PodcastTest(unittest.TestCase):
   result = p.caption_cues(passages, strip_higgs_tags=True)
   self.assertEqual(result['cues'][0], {'start': 0.0, 'end': 1.5, 'text': 'Hello.'})
   self.assertIn('<|emotion:joy|>', p.caption_cues(passages)['cues'][0]['text'])
+  expressive = [{'start_seconds': 0, 'end_seconds': 2, 'text': '<|sfx:laughter|>Haha, <|prosody:pause|>that is useful.'}]
+  self.assertEqual(p.caption_cues(expressive, strip_higgs_tags=True)['cues'][0]['text'], 'Haha, that is useful.')
   passages[1]['start_seconds'] = 1.0
   with self.assertRaises(ValueError): p.caption_cues(passages)
 
