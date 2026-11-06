@@ -114,6 +114,7 @@ def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, 
 
 TOOLS = {
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
+    'podcast_mix': ('Mix explicitly selected narration and music files into a private WAV without audio playback. Music loops; no automatic ducking. Check rights and listen before sharing.', {'narration_path': {'type': 'string'}, 'music_path': {'type': 'string'}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'music_path']),
     'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}}, ['passages']),
     'podcast_show_notes': ('Prepare chapter labels and deduplicated source references from caller-supplied measured start times; does not inspect audio or verify sources.', {'segments': {'type': 'array'}, 'starts': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}, ['segments', 'starts']),
     'podcast_pagecast_plan': ('Prepare reviewed dialogue for optional PageCast import with an explicit paragraph-to-speaker map. Does not render audio.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
@@ -123,8 +124,12 @@ TOOLS = {
 
 def invoke(name, args):
     try:
+        if name == 'podcast_mix':
+            from plugins.plugin_storage import plugin_data_dir
+            from .mix import mix
+            return json.dumps(mix(plugin_data_dir('podcast-studio'), **args))
         return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_show_notes': show_notes, 'podcast_caption_cues': caption_cues}[name](**args))
-    except (TypeError, KeyError, ValueError) as exc:
+    except (TypeError, KeyError, ValueError, OSError, RuntimeError) as exc:
         return json.dumps({'error': str(exc)})
 
 

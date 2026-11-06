@@ -11,3 +11,5 @@ Example `podcast_check_script` input:
 ```
 
 After checking the sources and reviewing the complete segment, copy its returned `sha256` into a review entry and add nonempty `purpose`, `opening_check`, `source_check`, and `edits` notes. Send those entries in order with a `reviewer` to `podcast_check_review`. Re-run the review if the script or its source references change.
+
+`podcast_mix` combines explicitly selected trusted narration and music files into a private 48 kHz stereo WAV. Music loops under the narration; `music_db` defaults to -18 dB and `voice_db` to 0 dB, with a peak limiter. It does not play audio, generate music, automatically duck or certify loudness. Each input is limited to 512 MiB; narration is limited to two hours and output to 2 GiB, with a 120-second encode timeout. Selected active-profile plugin media requires `allow_profile_media`. Check the final mix, timing, metadata, source rights and any required voice/music attribution before sharing.

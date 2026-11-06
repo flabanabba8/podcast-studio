@@ -10,3 +10,4 @@ provides_tools:
   - podcast_pagecast_plan
   - podcast_show_notes
   - podcast_caption_cues
+  - podcast_mix
