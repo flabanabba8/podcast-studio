@@ -9,3 +9,4 @@ provides_tools:
   - podcast_check_review
   - podcast_pagecast_plan
   - podcast_show_notes
+  - podcast_caption_cues

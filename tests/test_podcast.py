@@ -24,6 +24,14 @@ class PodcastTest(unittest.TestCase):
   digest = p.check_script(segments)['segments'][0]['sha256']
   review = {'reviewer': 'Fixture', 'segments': [{'sha256': digest, 'purpose': 'Fixture', 'opening_check': 'Fixture', 'source_check': 'Fixture', 'edits': 'None'}]}
   with self.assertRaisesRegex(ValueError, 'one speakable line'): p.pagecast_plan(segments, review)
+ def test_caption_cues_are_passage_timed_and_tags_are_optional(self):
+  passages = [{'start_seconds': 0.0, 'end_seconds': 1.5, 'text': '<|emotion:joy|>Hello.'}, {'start_seconds': 1.5, 'end_seconds': 3.0, 'text': 'Next sentence.'}]
+  result = p.caption_cues(passages, strip_higgs_tags=True)
+  self.assertEqual(result['cues'][0], {'start': 0.0, 'end': 1.5, 'text': 'Hello.'})
+  self.assertIn('<|emotion:joy|>', p.caption_cues(passages)['cues'][0]['text'])
+  passages[1]['start_seconds'] = 1.0
+  with self.assertRaises(ValueError): p.caption_cues(passages)
+
  def test_show_notes_use_measured_order_and_deduplicate_sources(self):
   segments = [{'title': 'First', 'sources': ['Paper'], 'turns': [{'speaker': 'A', 'text': 'Hello.'}]}, {'title': 'Second', 'sources': ['Paper', 'Other'], 'turns': [{'speaker': 'B', 'text': 'World.'}]}]
   result = p.show_notes(segments, [0, 62])

@@ -1,6 +1,8 @@
 """Local source-aware podcast script and editorial-receipt checks."""
 import hashlib
 import json
+import math
+import re
 from pathlib import Path
 
 
@@ -83,8 +85,30 @@ def show_notes(segments, starts):
             'notice': 'Times and source references are supplied by the caller, not verified against audio or source content.'}
 
 
+def caption_cues(passages, strip_higgs_tags=False):
+    if type(strip_higgs_tags) is not bool: raise ValueError('strip_higgs_tags must be boolean')
+    if not isinstance(passages, list) or not 1 <= len(passages) <= 100:
+        raise ValueError('Provide 1 to 100 timed passages with text')
+    cues, last = [], 0
+    for item in passages:
+        if not isinstance(item, dict) or not isinstance(item.get('text'), str): raise ValueError('Each passage needs text and timing')
+        start, end = item.get('start_seconds'), item.get('end_seconds')
+        if any(type(x) not in (int, float) or not math.isfinite(x) for x in (start, end)) or start < last or end <= start or end > 86400 or round(start*1000) >= round(end*1000):
+            raise ValueError('Passage times must be ordered and non-overlapping')
+        text = item['text']
+        if strip_higgs_tags:
+            text = re.sub(r'<\|(?:emotion|style|prosody|sfx):[A-Za-z0-9_]+\|>', '', text)
+        text = text.strip()
+        if not text or len(text) > 4000 or '\r' in text or '-->' in text or re.search(r'\n[ \t]*\n', text) or any(ord(c) < 32 and c != '\n' for c in text):
+            raise ValueError('Passage text cannot form a valid caption cue')
+        cues.append({'start': start, 'end': end, 'text': text})
+        last = end
+    return {'cues': cues, 'notice': 'Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
+
+
 TOOLS = {
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
+    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array'}, 'strip_higgs_tags': {'type': 'boolean'}}, ['passages']),
     'podcast_show_notes': ('Prepare chapter labels and deduplicated source references from caller-supplied measured start times; does not inspect audio or verify sources.', {'segments': {'type': 'array'}, 'starts': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}, ['segments', 'starts']),
     'podcast_pagecast_plan': ('Prepare reviewed dialogue for optional PageCast import with an explicit paragraph-to-speaker map. Does not render audio.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
     'podcast_check_review': ('Check a supplied full editorial review covers the current exact segments. Review is self-attested.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
@@ -93,7 +117,7 @@ TOOLS = {
 
 def invoke(name, args):
     try:
-        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_show_notes': show_notes}[name](**args))
+        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_show_notes': show_notes, 'podcast_caption_cues': caption_cues}[name](**args))
     except (TypeError, KeyError, ValueError) as exc:
         return json.dumps({'error': str(exc)})
 
