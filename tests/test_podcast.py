@@ -39,6 +39,8 @@ class PodcastTest(unittest.TestCase):
   self.assertEqual(result['sources'], ['Paper', 'Other'])
   with self.assertRaises(ValueError): p.show_notes(segments, [0, 0])
   with self.assertRaises(ValueError): p.show_notes(segments, [0, True])
+  segments[1]['title'] = 'Second\u2028hidden'
+  with self.assertRaises(ValueError): p.show_notes(segments, [0, 62])
 
  def test_missing_sources_and_incomplete_review_fail(self):
   segments = [{'title': 'A', 'sources': [], 'turns': [{'speaker': 'A', 'text': 'Hello.'}]}]

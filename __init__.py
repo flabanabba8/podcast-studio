@@ -76,10 +76,10 @@ def show_notes(segments, starts):
     chapters, references = [], []
     for segment, start in zip(segments, starts):
         title = segment['title'].strip()
-        if any(ord(c) < 32 for c in title): raise ValueError('Chapter titles must be single-line printable text')
+        if title.splitlines() != [title] or any(ord(c) < 32 for c in title): raise ValueError('Chapter titles must be single-line printable text')
         chapters.append(f'{timestamp(start)} {title}')
         for source in segment['sources']:
-            if any(ord(c) < 32 for c in source): raise ValueError('Source references must be single-line printable text')
+            if source.splitlines() != [source] or any(ord(c) < 32 for c in source): raise ValueError('Source references must be single-line printable text')
             if source not in references: references.append(source)
     return {'chapters': chapters, 'sources': references,
             'notice': 'Times and source references are supplied by the caller, not verified against audio or source content.'}
@@ -99,7 +99,7 @@ def caption_cues(passages, strip_higgs_tags=False):
         if strip_higgs_tags:
             text = re.sub(r'<\|(?:emotion|style|prosody|sfx):[A-Za-z0-9_]+\|>', '', text)
         text = text.strip()
-        if not text or len(text) > 4000 or '\r' in text or '-->' in text or re.search(r'\n[ \t]*\n', text) or any(ord(c) < 32 and c != '\n' for c in text):
+        if not text or len(text) > 4000 or any(c in text for c in ('\r', '\u0085', '\u2028', '\u2029')) or '-->' in text or re.search(r'\n[ \t]*\n', text) or any(ord(c) < 32 and c != '\n' for c in text):
             raise ValueError('Passage text cannot form a valid caption cue')
         cues.append({'start': start, 'end': end, 'text': text})
         last = end
