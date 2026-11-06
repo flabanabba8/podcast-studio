@@ -59,7 +59,8 @@ def pagecast_plan(segments, review):
             lines.append(text)
     if len(lines) > 1000 or sum(len(line) + 1 for line in lines) > 1_000_000:
         raise ValueError('PageCast draft exceeds the turn or character limit')
-    return {'text': '\n'.join(lines), 'assignments': assignments,
+    text = '\n'.join(lines)
+    return {'text': text, 'source_sha256': hashlib.sha256(text.encode('utf-8')).hexdigest(), 'assignments': assignments,
             'notice': 'Import text into PageCast, inspect every resulting paragraph and assign all of its passage IDs to the listed speaker. PageCast may split turns. Review is self-attested; no speech was generated.'}
 
 
