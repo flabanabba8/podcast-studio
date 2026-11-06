@@ -63,7 +63,7 @@ def mix(root, narration_path, music_path, music_db=-18, voice_db=0, allow_profil
             if before != [identity(path) for path in (narration, music)]: raise RuntimeError('An input changed during mixing; output discarded')
             os.replace(partial, output)
             return {'output_path': str(output), 'duration_seconds': actual, 'music_db': music_db, 'voice_db': voice_db,
-                    'notice': 'Music loops under the narration; there is no automatic ducking or editorial/loudness review. Check licensing, attribution, music balance and final audio before sharing.'}
+                    'notice': 'Music loops under the narration; there is no automatic ducking or editorial/loudness review. Mixing may shift timing. Check licensing, attribution, balance and final audio before sharing.'}
         except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
             raise RuntimeError('Audio mix or metadata check failed') from exc
         finally:
