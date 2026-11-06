@@ -1,8 +1,4 @@
 """Explicit local narration/music mix; never opens an audio device."""
-try:
-    import fcntl
-except ImportError:
-    fcntl = None
 import json
 import math
 import os
@@ -10,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import uuid
+from . import locking
 
 PRIVATE = {'.ssh', '.gnupg', '.aws', '.azure', '.codex', '.docker', '.kube', '.pki', '.config', '.hermes'}
 
@@ -40,7 +37,7 @@ def mix_timeline(root, narration_path, beds, voice_db=0, allow_profile_media=Fal
 
 
 def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_open_end):
-    if fcntl is None: raise ValueError('Audio mixing requires POSIX file locking; Windows is unsupported')
+    if locking.fcntl is None and locking.msvcrt is None: raise ValueError('Audio mixing requires supported file locking')
     if type(allow_profile_media) is not bool: raise ValueError('allow_profile_media must be boolean')
     if type(voice_db) not in (int, float) or not math.isfinite(voice_db) or not -12 <= voice_db <= 0:
         raise ValueError('Use voice gain -12 to 0 dB')
@@ -75,9 +72,8 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
     root = Path(root); root.mkdir(mode=0o700, parents=True, exist_ok=True)
     ident = uuid.uuid4().hex; partial = root/(ident+'.partial.wav'); output = root/(ident+'.wav')
     env = {'PATH': os.defpath, 'LANG': 'C.UTF-8'}
-    with (root/'.mix.lock').open('a') as lock:
-        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc: raise RuntimeError('Another podcast mix is running') from exc
+    if os.name == 'nt' and 'SystemRoot' in os.environ: env['SystemRoot'] = os.environ['SystemRoot']
+    with locking.exclusive_lock(root/'.mix.lock', 'Another podcast mix is running'):
         try:
             def probe(path):
                 result = subprocess.run([ffprobe, '-v', 'error', '-protocol_whitelist', 'file,pipe', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', str(path)], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, timeout=10, check=False)

@@ -80,8 +80,16 @@ class MixTests(unittest.TestCase):
    self.assertEqual(media(str(audio),root,True),audio)
    with self.assertRaises(ValueError):mix(root,str(audio),str(audio),music_db=float('nan'),allow_profile_media=True)
  def test_unsupported_platform_fails_before_file_access(self):
-  with patch('podcast_mix_fixture.mix.fcntl', None):
-   with self.assertRaisesRegex(ValueError,'Windows is unsupported'):mix(Path('/tmp/fixture'),'missing.wav','missing.wav')
+  with patch('podcast_mix_fixture.locking.fcntl', None), patch('podcast_mix_fixture.locking.msvcrt', None):
+   with self.assertRaisesRegex(ValueError,'supported file locking'):mix(Path('/tmp/fixture'),'missing.wav','missing.wav')
+ def test_posix_lock_rejects_a_second_owner(self):
+  from podcast_mix_fixture import locking
+  if locking.fcntl is None:self.skipTest('POSIX-specific lock check')
+  with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
+   path=Path(tmp)/'lock'
+   with locking.exclusive_lock(path,'busy'):
+    with self.assertRaisesRegex(RuntimeError,'busy'):
+     with locking.exclusive_lock(path,'busy'):pass
 
  def test_timeout_removes_partial(self):
   with tempfile.TemporaryDirectory(dir='/tmp') as tmp:

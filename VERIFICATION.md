@@ -1,6 +1,6 @@
 # Verification
 
-- Native Windows Python 3.14 passed a synthetic script-planning check and confirmed that mixing reports its unsupported POSIX-locking requirement. No Windows audio was produced or heard.
+- An initial native Windows check exposed the POSIX-locking limitation. After adding Windows locking, synthetic single-bed and timed-bed mixes passed on Python 3.14 with FFmpeg; the timed check measured both beds and a silent gap, and a separate process was refused while the lock was held. A synthetic mix also fed the video plugin. No audio was played or perceptually reviewed; Windows ACLs, real episodes and broader Windows coverage remain unverified.
 
 - Unit checks cover missing sources, incomplete reviews, and stale review detection when dialogue or source references change.
 - Hermes manifest validation, Plugin Doctor, and actual runtime skill discovery passed.

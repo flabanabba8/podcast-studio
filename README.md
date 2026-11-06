@@ -12,7 +12,7 @@ Example `podcast_check_script` input:
 
 After checking the sources and reviewing the complete segment, copy its returned `sha256` into a review entry and add nonempty `purpose`, `opening_check`, `source_check`, and `edits` notes. Send those entries in order with a `reviewer` to `podcast_check_review`. Re-run the review if the script or its source references change.
 
-`podcast_mix` requires POSIX file locking plus local FFmpeg and ffprobe with the `alimiter` latency-compensation option (tested on Linux; Windows is unsupported) and combines explicitly selected trusted narration and music files into a private 48 kHz stereo WAV. Music loops under the narration; `music_db` defaults to -18 dB and `voice_db` to 0 dB, with a peak limiter. It does not play audio, generate music, automatically duck or certify loudness. Each input is limited to 512 MiB and two hours; output is limited to 2 GiB, with a 120-second encode timeout. Selected active-profile plugin media requires `allow_profile_media`. Mixing may shift timing, so recheck passage captions against the final audio. Check the final mix, timing, metadata, source rights and any required voice/music attribution before sharing.
+`podcast_mix` requires local FFmpeg and ffprobe with the `alimiter` latency-compensation option and supported POSIX or Windows file locking (synthetic checks passed on Linux and Windows) and combines explicitly selected trusted narration and music files into a private 48 kHz stereo WAV. Music loops under the narration; `music_db` defaults to -18 dB and `voice_db` to 0 dB, with a peak limiter. It does not play audio, generate music, automatically duck or certify loudness. Each input is limited to 512 MiB and two hours; output is limited to 2 GiB, with a 120-second encode timeout. Selected active-profile plugin media requires `allow_profile_media`. Mixing may shift timing, so recheck passage captions against the final audio. Check the final mix, timing, metadata, source rights and any required voice/music attribution before sharing.
 
 Example `podcast_mix` arguments, using files you selected and have rights to use:
 
@@ -35,3 +35,5 @@ loops only within its interval; gaps have no music. For example:
 Intervals must fit the narration. Each bed can optionally specify `fade_in_ms` and `fade_out_ms`; their total must fit the bed. There are no automatic fades, crossfades or ducking, so check boundaries and balance by listening. Both mix tools use the
 same private-output, profile opt-in, source-size and timeout limits described
 above.
+
+Windows tests used synthetic media and did not verify Windows ACLs, perceptual quality, or real episodes. PageCast Director itself remains Linux-only. Review the output directory’s access controls.
