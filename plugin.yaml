@@ -1,6 +1,6 @@
 name: podcast-studio
 version: "0.1.0"
-description: "Plan and review source-backed podcasts with a script-bound editorial gate."
+description: "Develop source-backed podcasts with review checks, timed captions and local music mixing."
 author: "Podcast Studio contributors"
 license: GPL-3.0-or-later
 requires_hermes: ">=0.22.0"
