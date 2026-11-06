@@ -6,3 +6,4 @@
 - Source fidelity, editorial judgment, naturalness, long-form production, and publishing are not automatically verified. This candidate is not a completed contest submission.
 - A synthetic two-segment PageCast WAV timeline was mapped back to podcast segments and used to build chapter notes; its final passage boundary matched the exported WAV duration. No listening review was performed.
 - A synthetic PageCast timeline with explicitly requested passage text produced draft cues accepted by YouTube Video Studio. No speech transcription, word-level alignment or listening review was performed.
+- A synthetic PageCast caption handoff checks matching original-source fingerprints and rejects a mismatch. The fingerprint cannot detect later edits inside PageCast.

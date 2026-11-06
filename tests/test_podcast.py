@@ -28,6 +28,10 @@ class PodcastTest(unittest.TestCase):
   passages = [{'start_seconds': 0.0, 'end_seconds': 1.5, 'text': '<|emotion:joy|>Hello.'}, {'start_seconds': 1.5, 'end_seconds': 3.0, 'text': 'Next sentence.'}]
   result = p.caption_cues(passages, strip_higgs_tags=True)
   self.assertEqual(result['cues'][0], {'start': 0.0, 'end': 1.5, 'text': 'Hello.'})
+  self.assertEqual(result['source_binding'], 'not_checked')
+  self.assertEqual(p.caption_cues(passages, expected_source_sha256='a'*64, actual_source_sha256='a'*64)['source_binding'], 'matched_original_import')
+  with self.assertRaisesRegex(ValueError, 'different original'): p.caption_cues(passages, expected_source_sha256='a'*64, actual_source_sha256='b'*64)
+  with self.assertRaises(ValueError): p.caption_cues(passages, expected_source_sha256='a'*64)
   self.assertIn('<|emotion:joy|>', p.caption_cues(passages)['cues'][0]['text'])
   expressive = [{'start_seconds': 0, 'end_seconds': 2, 'text': '<|sfx:laughter|>Haha, <|prosody:pause|>that is useful.'}]
   self.assertEqual(p.caption_cues(expressive, strip_higgs_tags=True)['cues'][0]['text'], 'Haha, that is useful.')

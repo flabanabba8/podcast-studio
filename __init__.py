@@ -86,8 +86,13 @@ def show_notes(segments, starts):
             'notice': 'Times and source references are supplied by the caller, not verified against audio or source content.'}
 
 
-def caption_cues(passages, strip_higgs_tags=False):
+def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, actual_source_sha256=None):
     if type(strip_higgs_tags) is not bool: raise ValueError('strip_higgs_tags must be boolean')
+    if (expected_source_sha256 is None) != (actual_source_sha256 is None): raise ValueError('Provide both source fingerprints or neither')
+    if expected_source_sha256 is not None:
+        if any(not isinstance(value, str) or not re.fullmatch(r'[0-9a-f]{64}', value) for value in (expected_source_sha256, actual_source_sha256)):
+            raise ValueError('Source fingerprints must be lowercase SHA-256')
+        if expected_source_sha256 != actual_source_sha256: raise ValueError('Timeline came from a different original source')
     if not isinstance(passages, list) or not 1 <= len(passages) <= 100:
         raise ValueError('Provide 1 to 100 timed passages with text')
     cues, last = [], 0
@@ -104,12 +109,12 @@ def caption_cues(passages, strip_higgs_tags=False):
             raise ValueError('Passage text cannot form a valid caption cue')
         cues.append({'start': start, 'end': end, 'text': text})
         last = end
-    return {'cues': cues, 'notice': 'Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
+    return {'cues': cues, 'source_binding': 'matched_original_import' if expected_source_sha256 is not None else 'not_checked', 'notice': 'Caller-supplied fingerprints cover the original import only; they are not independently authenticated and do not cover later edits. Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
 
 
 TOOLS = {
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
-    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}}, ['passages']),
+    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}}, ['passages']),
     'podcast_show_notes': ('Prepare chapter labels and deduplicated source references from caller-supplied measured start times; does not inspect audio or verify sources.', {'segments': {'type': 'array'}, 'starts': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}, ['segments', 'starts']),
     'podcast_pagecast_plan': ('Prepare reviewed dialogue for optional PageCast import with an explicit paragraph-to-speaker map. Does not render audio.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
     'podcast_check_review': ('Check a supplied full editorial review covers the current exact segments. Review is self-attested.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
