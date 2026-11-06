@@ -47,10 +47,13 @@ class MixTests(unittest.TestCase):
     def level(start):
      f.setpos(int(start*48000));data=f.readframes(2400);values=struct.unpack('<'+'h'*(len(data)//2),data)[::2];return sum(abs(x) for x in values)/len(values)
     early,middle,late=level(.03),level(.45),level(.92)
+    f.setpos(int(1.4*48000));data=f.readframes(9600);transition=struct.unpack('<'+'h'*(len(data)//2),data)[::2]
+    onset=1.4+next(i for i,x in enumerate(transition) if abs(x)>100)/48000
    def crossings(values):return sum((a<0)!=(b<0) for a,b in zip(values,values[1:]))
    self.assertGreater(crossings(second),crossings(first)*1.5)
    self.assertLess(max(abs(x) for x in gap),20)
    self.assertLess(early,middle*.6);self.assertLess(late,middle*.6)
+   self.assertLess(abs(onset-1.5),.002)
    beds[0]['fade_in_ms']=900;beds[0]['fade_out_ms']=200
    with self.assertRaisesRegex(ValueError,'Fades'):mix_timeline(base/'out',str(voice),beds)
    beds[0]['fade_in_ms']=200
