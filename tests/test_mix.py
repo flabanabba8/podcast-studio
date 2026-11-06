@@ -63,6 +63,10 @@ class MixTests(unittest.TestCase):
    with self.assertRaises(ValueError):media(str(audio),root,False)
    self.assertEqual(media(str(audio),root,True),audio)
    with self.assertRaises(ValueError):mix(root,str(audio),str(audio),music_db=float('nan'),allow_profile_media=True)
+ def test_unsupported_platform_fails_before_file_access(self):
+  with patch('podcast_mix_fixture.mix.fcntl', None):
+   with self.assertRaisesRegex(ValueError,'Windows is unsupported'):mix(Path('/tmp/fixture'),'missing.wav','missing.wav')
+
  def test_timeout_removes_partial(self):
   with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
    base=Path(tmp);a=base/'a.wav';b=base/'b.wav';a.write_bytes(b'fixture');b.write_bytes(b'fixture')

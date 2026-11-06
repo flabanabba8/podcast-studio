@@ -1,5 +1,8 @@
 """Explicit local narration/music mix; never opens an audio device."""
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 import json
 import math
 import os
@@ -37,6 +40,7 @@ def mix_timeline(root, narration_path, beds, voice_db=0, allow_profile_media=Fal
 
 
 def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_open_end):
+    if fcntl is None: raise ValueError('Audio mixing requires POSIX file locking; Windows is unsupported')
     if type(allow_profile_media) is not bool: raise ValueError('allow_profile_media must be boolean')
     if type(voice_db) not in (int, float) or not math.isfinite(voice_db) or not -12 <= voice_db <= 0:
         raise ValueError('Use voice gain -12 to 0 dB')
