@@ -19,6 +19,11 @@ class PodcastTest(unittest.TestCase):
   segments[0]['turns'][0]['text'] = 'Here is the finding.'
   segments[0]['sources'][0] = 'Different source'
   with self.assertRaisesRegex(ValueError, 'changed'): p.check_review(segments, review)
+ def test_pagecast_rejects_hidden_line_separators(self):
+  segments = [{'title': 'Test', 'sources': ['Fixture'], 'turns': [{'speaker': 'A', 'text': 'One\u2028Two'}]}]
+  digest = p.check_script(segments)['segments'][0]['sha256']
+  review = {'reviewer': 'Fixture', 'segments': [{'sha256': digest, 'purpose': 'Fixture', 'opening_check': 'Fixture', 'source_check': 'Fixture', 'edits': 'None'}]}
+  with self.assertRaisesRegex(ValueError, 'one speakable line'): p.pagecast_plan(segments, review)
  def test_missing_sources_and_incomplete_review_fail(self):
   segments = [{'title': 'A', 'sources': [], 'turns': [{'speaker': 'A', 'text': 'Hello.'}]}]
   with self.assertRaises(ValueError): p.check_script(segments)

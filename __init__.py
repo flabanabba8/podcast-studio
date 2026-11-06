@@ -49,7 +49,7 @@ def pagecast_plan(segments, review):
     for segment in segments:
         for turn in segment['turns']:
             text, speaker = turn['text'].strip(), turn['speaker'].strip()
-            if any(c in text for c in ('\n', '\r')) or not any(c.isalnum() for c in text):
+            if text.splitlines() != [text] or not any(c.isalnum() for c in text):
                 raise ValueError('Each PageCast turn must be one speakable line')
             if len(speaker) > 80 or any(ord(c) < 32 for c in speaker):
                 raise ValueError('PageCast speakers must be at most 80 printable characters')
