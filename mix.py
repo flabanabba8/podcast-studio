@@ -2,6 +2,7 @@
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -26,17 +27,18 @@ def media(value, root, allow_profile_media):
     return path
 
 
-def mix(root, narration_path, music_path, music_db=-18, voice_db=0, allow_profile_media=False):
-    result = _mix(root, narration_path, [{'music_path': music_path, 'start_ms': 0, 'end_ms': None, 'music_db': music_db}], voice_db, allow_profile_media, allow_open_end=True)
+def mix(root, narration_path, music_path, music_db=-18, voice_db=0, allow_profile_media=False, loudness_lufs=None):
+    result = _mix(root, narration_path, [{'music_path': music_path, 'start_ms': 0, 'end_ms': None, 'music_db': music_db}], voice_db, allow_profile_media, allow_open_end=True, loudness_lufs=loudness_lufs)
     result['music_db'] = music_db
     return result
 
 
-def mix_timeline(root, narration_path, beds, voice_db=0, allow_profile_media=False):
-    return _mix(root, narration_path, beds, voice_db, allow_profile_media, allow_open_end=False)
+def mix_timeline(root, narration_path, beds, voice_db=0, allow_profile_media=False, loudness_lufs=None):
+    return _mix(root, narration_path, beds, voice_db, allow_profile_media, allow_open_end=False, loudness_lufs=loudness_lufs)
 
 
-def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_open_end):
+def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_open_end, loudness_lufs=None):
+    if loudness_lufs is not None and (type(loudness_lufs) not in (int, float) or not math.isfinite(loudness_lufs) or not -30 <= loudness_lufs <= -10): raise ValueError('loudness_lufs must be -30 to -10 (spoken word is commonly about -16)')
     if locking.fcntl is None and locking.msvcrt is None: raise ValueError('Audio mixing requires supported file locking')
     if type(allow_profile_media) is not bool: raise ValueError('allow_profile_media must be boolean')
     if type(voice_db) not in (int, float) or not math.isfinite(voice_db) or not -12 <= voice_db <= 0:
@@ -102,16 +104,19 @@ def _mix(root, narration_path, beds, voice_db, allow_profile_media, *, allow_ope
                     filters.append(f'[silence{index}][music{index}]concat=n=2:v=0:a=1[bed{index}]')
                 else:
                     filters.append(source + f'[bed{index}]')
-            filters.append('[voice]' + ''.join(f'[bed{i}]' for i in range(1,len(selected)+1)) + f'amix=inputs={len(selected)+1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0:latency=1[out]')
+            filters.append('[voice]' + ''.join(f'[bed{i}]' for i in range(1,len(selected)+1)) + f'amix=inputs={len(selected)+1}:duration=first:dropout_transition=0:normalize=0' + (f',loudnorm=I={loudness_lufs}:TP=-1.5:LRA=11' if loudness_lufs is not None else '') + ',alimiter=limit=0.95:level=0:latency=1[out]')
             command += ['-filter_complex', ';'.join(filters), '-map', '[out]', '-t', str(duration), '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2', '-threads', '1', '-map_metadata', '-1', '-map_chapters', '-1', '-fs', str(2 * 1024**3), '-y', str(partial)]
             result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, timeout=120, check=False)
             if result.returncode or not partial.stat().st_size: raise RuntimeError('Audio mix failed; verify FFmpeg supports limiter latency compensation')
             actual = probe(partial)
             if abs(actual-duration) > 0.25: raise RuntimeError('Mixed audio duration does not match narration')
             if before != [identity(path) for path in sources]: raise RuntimeError('An input changed during mixing; output discarded')
+            measured = subprocess.run([ffmpeg, '-nostats', '-nostdin', '-i', str(partial), '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=env, timeout=120, check=False)
+            summary = re.findall(r'I:\s*(-?\d+(?:\.\d+)?)\s*LUFS', measured.stderr.decode('utf-8', 'replace')[-4000:])
+            integrated = float(summary[-1]) if summary else None
             os.replace(partial, output)
-            return {'output_path': str(output), 'duration_seconds': actual, 'beds': len(selected), 'voice_db': voice_db,
-                    'notice': 'Music loops within each selected bed; there is no automatic ducking or editorial/loudness review. Mixing may shift timing. Check licensing, attribution, balance and final audio before sharing.'}
+            return {'output_path': str(output), 'duration_seconds': actual, 'beds': len(selected), 'voice_db': voice_db, 'integrated_lufs': integrated, 'loudness_target_lufs': loudness_lufs,
+                    'notice': 'Music loops within each selected bed; there is no automatic ducking. A loudness target is a one-pass approximation, and the measured integrated loudness is reported; neither is an editorial review. Mixing may shift timing. Check licensing, attribution, balance and final audio before sharing.'}
         except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
             raise RuntimeError('Audio mix or metadata check failed') from exc
         finally:

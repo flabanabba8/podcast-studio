@@ -74,7 +74,7 @@ Each hash is the SHA-256 of that exact file. Record real cuts and corrections; n
 
 Use only voices the user is authorized to use. Hosted or local speech engines cost money or hardware; say which one you are using and what it will cost before rendering. Use `podcast_pagecast_plan` and PageCast for casting, locked voices and resumable renders; compare the handoff with `podcast_check_pagecast_cast` and timing fingerprints. Keep delivery tags out of captions (`strip_higgs_tags`). A tagged expressiveness pass after the editorial review needs its own check and a fresh review record.
 
-Mix with `podcast_mix` or `podcast_mix_timeline`: music is a separate bed with explicit start, end, fade and gain; beds bridge pauses between segments; one loudness target for the finished file (for example about -16 LUFS integrated for spoken word). Check rights for any music. Listen before sharing: matching hashes and passing checks say nothing about how it sounds.
+Mix with `podcast_mix` or `podcast_mix_timeline`: music is a separate bed with explicit start, end, fade and gain; beds bridge pauses between segments; one loudness target for the finished file: pass `loudness_lufs` (about -16 is common for spoken word); the tool is a one-pass approximation and reports the measured `integrated_lufs`, so confirm it. Check rights for any music. Listen before sharing: matching hashes and passing checks say nothing about how it sounds.
 
 ## 6. Chapters, captions and notes
 

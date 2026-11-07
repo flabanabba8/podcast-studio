@@ -108,3 +108,17 @@ class MixTests(unittest.TestCase):
    self.assertFalse(list((base/'out').glob('*.wav')))
 
 if __name__=='__main__':unittest.main()
+
+class LoudnessTests(unittest.TestCase):
+ @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'ffmpeg and ffprobe required')
+ def test_loudness_target_is_applied_and_measured(self):
+  with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
+   base=Path(tmp);narration=base/'n.wav';music=base/'m.wav'
+   for path,freq,amp in ((narration,220,0.03),(music,330,0.02)):
+    subprocess.run(['ffmpeg','-v','error','-y','-f','lavfi','-i',f'sine=f={freq}:d=20:sample_rate=48000','-af',f'volume={amp}',str(path)],check=True,stdin=subprocess.DEVNULL)
+   quiet=mix(base/'out',str(narration),str(music))
+   target=mix(base/'out2',str(narration),str(music),loudness_lufs=-16)
+   self.assertLess(quiet['integrated_lufs'],-30)
+   self.assertAlmostEqual(target['integrated_lufs'],-16,delta=2.5)
+   self.assertEqual(target['loudness_target_lufs'],-16)
+   with self.assertRaisesRegex(ValueError,'loudness_lufs'):mix(base/'out3',str(narration),str(music),loudness_lufs=-5)
