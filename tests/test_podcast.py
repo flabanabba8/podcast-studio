@@ -30,6 +30,10 @@ class PodcastTest(unittest.TestCase):
   self.assertEqual(result['cues'][0], {'start': 0.0, 'end': 1.5, 'text': 'Hello.'})
   self.assertEqual(result['source_binding'], 'not_checked')
   self.assertEqual(p.caption_cues(passages, expected_source_sha256='a'*64, actual_source_sha256='a'*64)['source_binding'], 'matched_original_import')
+  self.assertEqual(p.caption_cues(passages, expected_source_sha256='a'*64, actual_source_sha256='a'*64, source_text_status='unchanged')['source_binding'], 'matched_original_import_and_unchanged_text')
+  for status in ('changed', 'unavailable'):
+   with self.assertRaisesRegex(ValueError, 'changed or its import baseline'): p.caption_cues(passages, expected_source_sha256='a'*64, actual_source_sha256='a'*64, source_text_status=status)
+  with self.assertRaisesRegex(ValueError, 'requires both'): p.caption_cues(passages, source_text_status='unchanged')
   with self.assertRaisesRegex(ValueError, 'different original'): p.caption_cues(passages, expected_source_sha256='a'*64, actual_source_sha256='b'*64)
   with self.assertRaises(ValueError): p.caption_cues(passages, expected_source_sha256='a'*64)
   self.assertIn('<|emotion:joy|>', p.caption_cues(passages)['cues'][0]['text'])

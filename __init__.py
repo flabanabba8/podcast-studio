@@ -86,13 +86,17 @@ def show_notes(segments, starts):
             'notice': 'Times and source references are supplied by the caller, not verified against audio or source content.'}
 
 
-def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, actual_source_sha256=None):
+def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, actual_source_sha256=None, source_text_status=None):
     if type(strip_higgs_tags) is not bool: raise ValueError('strip_higgs_tags must be boolean')
     if (expected_source_sha256 is None) != (actual_source_sha256 is None): raise ValueError('Provide both source fingerprints or neither')
     if expected_source_sha256 is not None:
         if any(not isinstance(value, str) or not re.fullmatch(r'[0-9a-f]{64}', value) for value in (expected_source_sha256, actual_source_sha256)):
             raise ValueError('Source fingerprints must be lowercase SHA-256')
         if expected_source_sha256 != actual_source_sha256: raise ValueError('Timeline came from a different original source')
+    if source_text_status is not None:
+        if source_text_status not in ('unchanged', 'changed', 'unavailable'): raise ValueError('Invalid PageCast source text status')
+        if expected_source_sha256 is None: raise ValueError('Source text status requires both source fingerprints')
+        if source_text_status != 'unchanged': raise ValueError('PageCast text changed or its import baseline is unavailable; review the current script')
     if not isinstance(passages, list) or not 1 <= len(passages) <= 100:
         raise ValueError('Provide 1 to 100 timed passages with text')
     cues, last = [], 0
@@ -109,14 +113,15 @@ def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, 
             raise ValueError('Passage text cannot form a valid caption cue')
         cues.append({'start': start, 'end': end, 'text': text})
         last = end
-    return {'cues': cues, 'source_binding': 'matched_original_import' if expected_source_sha256 is not None else 'not_checked', 'notice': 'Caller-supplied fingerprints cover the original import only; they are not independently authenticated and do not cover later edits. Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
+    binding = 'matched_original_import_and_unchanged_text' if source_text_status == 'unchanged' else 'matched_original_import' if expected_source_sha256 is not None else 'not_checked'
+    return {'cues': cues, 'source_binding': binding, 'notice': 'Caller-supplied fingerprints and text status are not independently authenticated; without a text status, an import-hash match does not detect later edits. Text status does not cover speaker assignments. Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
 
 
 TOOLS = {
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
     'podcast_mix_timeline': ('Mix 1–20 explicitly selected music beds over non-overlapping narration intervals into a private WAV. Times are milliseconds; optional explicit fades, no playback or automatic ducking.', {'narration_path': {'type': 'string'}, 'beds': {'type': 'array', 'minItems': 1, 'maxItems': 20, 'items': {'type': 'object', 'properties': {'music_path': {'type': 'string'}, 'start_ms': {'type': 'integer', 'minimum': 0}, 'end_ms': {'type': 'integer', 'minimum': 1}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'fade_in_ms': {'type': 'integer', 'minimum': 0}, 'fade_out_ms': {'type': 'integer', 'minimum': 0}}, 'required': ['music_path', 'start_ms', 'end_ms', 'music_db'], 'additionalProperties': False}}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'beds']),
     'podcast_mix': ('Mix explicitly selected narration and music files into a private WAV without audio playback. Music loops; no automatic ducking. Check rights and listen before sharing.', {'narration_path': {'type': 'string'}, 'music_path': {'type': 'string'}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'music_path']),
-    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}}, ['passages']),
+    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['passages']),
     'podcast_show_notes': ('Prepare chapter labels and deduplicated source references from caller-supplied measured start times; does not inspect audio or verify sources.', {'segments': {'type': 'array'}, 'starts': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}, ['segments', 'starts']),
     'podcast_pagecast_plan': ('Prepare reviewed dialogue for optional PageCast import with an explicit paragraph-to-speaker map. Does not render audio.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
     'podcast_check_review': ('Check a supplied full editorial review covers the current exact segments. Review is self-attested.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),

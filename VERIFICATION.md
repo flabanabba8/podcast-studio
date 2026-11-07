@@ -1,5 +1,6 @@
 # Verification
 
+- The optional PageCast text-status handoff accepts a matching source and `unchanged` status, rejects `changed` and `unavailable`, and requires both source fingerprints when status is provided. A Linux PageCast/Podcast fixture and a native Windows text-only fixture exercised edits and missing baselines. Caller-supplied values are not independently authenticated; speaker assignments, speech and later edits still require review.
 - Mixed-case private-directory boundaries were checked using synthetic paths on Linux and native Windows; no real credentials were used.
 
 - An initial native Windows check exposed the POSIX-locking limitation. After adding Windows locking, synthetic single-bed and timed-bed mixes passed on Python 3.14 with FFmpeg; the timed check measured both beds and a silent gap, and a separate process was refused while the lock was held. A synthetic mix also fed the video plugin. No audio was played or perceptually reviewed; Windows ACLs, real episodes and broader Windows coverage remain unverified.
