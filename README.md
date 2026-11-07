@@ -16,7 +16,8 @@ After assigning speakers in PageCast, `podcast_check_pagecast_cast` compares the
 complete passage list with the handoff's paragraph-to-speaker map. Collect all
 `pagecast_book` pages for the same book revision, then supply its total,
 `book.source_hash`, `source_text_status`, the handoff `source_sha256` and
-assignments. Missing passage IDs or paragraphs, mismatched source hashes and
+assignments. The check accepts at most 10,000 passages and 1,000 assignment
+paragraphs. Missing passage IDs or paragraphs, mismatched source hashes and
 changed or unavailable text baselines are rejected. Speaker mismatches are
 reported without changing them; at most 100 details are returned with an
 omitted count. The inputs are caller-supplied, not authenticated, and a match

@@ -16,6 +16,7 @@ class PodcastTest(unittest.TestCase):
   self.assertEqual(result['status'],'mismatched');self.assertEqual(result['mismatches'][0]['passage_id'],1)
   with self.assertRaisesRegex(ValueError,'every PageCast passage'):p.check_pagecast_cast(**{**args,'passages':passages[:-1]})
   with self.assertRaisesRegex(ValueError,'Duplicate passage'):p.check_pagecast_cast(**{**args,'passages':[passages[0],passages[0],passages[2]]})
+  with self.assertRaisesRegex(ValueError,'coverage is incomplete'):p.check_pagecast_cast(**{**args,'passages':[passages[0],passages[1],{**passages[2],'paragraph':0}]})
   with self.assertRaisesRegex(ValueError,'different original'):p.check_pagecast_cast(**{**args,'actual_source_sha256':'b'*64})
   with self.assertRaisesRegex(ValueError,'changed or its import baseline'):p.check_pagecast_cast(**{**args,'source_text_status':'unavailable'})
   many=[{'id':i,'paragraph':0,'speaker':'B'} for i in range(101)]
