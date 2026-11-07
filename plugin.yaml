@@ -5,6 +5,9 @@ author: "Podcast Studio contributors"
 license: GPL-3.0-or-later
 requires_hermes: ">=0.22.0"
 provides_tools:
+  - podcast_load_episode
+  - podcast_lint_episode
+  - podcast_preflight
   - podcast_check_script
   - podcast_check_review
   - podcast_pagecast_plan

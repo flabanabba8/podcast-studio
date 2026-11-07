@@ -148,7 +148,53 @@ def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, 
     return {'cues': cues, 'source_binding': binding, 'notice': 'Caller-supplied fingerprints and text status are not independently authenticated; without a text status, an import-hash match does not detect later edits. Text status does not cover speaker assignments. Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
 
 
+def load_episode_tool(episode_dir, require_sources=True):
+    from .episode import load_episode
+    return load_episode(episode_dir, require_sources)
+
+
+def lint_episode_tool(episode_dir, style=None, require_sources=True):
+    from .episode import load_episode
+    from .lint import lint
+    episode = load_episode(episode_dir, require_sources)
+    findings = lint(episode['segments'], episode['files'], style)
+    errors = sum(f['severity'] == 'error' for f in findings)
+    return {'status': 'blocked' if errors else 'clean', 'errors': errors, 'warnings': len(findings) - errors, 'findings': findings[:200], 'findings_omitted': max(0, len(findings) - 200),
+            'notice': 'Mechanical spoken-word checks only. They cannot judge accuracy, clarity or humor; the full editorial review is still required.'}
+
+
+def preflight_tool(episode_dir, style=None, require_sources=True, require_source_check=False):
+    """The pre-TTS gate: lint must have no errors, and a self-attested review must match the exact current files."""
+    from .episode import load_episode, check_review_file
+    from .lint import lint
+    if type(require_source_check) is not bool: raise ValueError('require_source_check must be boolean')
+    episode = load_episode(episode_dir, require_sources)
+    findings = lint(episode['segments'], episode['files'], style)
+    errors = [f for f in findings if f['severity'] == 'error']
+    if errors:
+        return {'status': 'blocked', 'reason': 'lint errors', 'errors': len(errors), 'findings': findings[:100]}
+    review = check_review_file(episode_dir, episode['segment_sha256'])
+    result = {'status': 'passed', 'files': len(episode['files']), 'segment_sha256': episode['segment_sha256'], 'warnings': len(findings), 'review': review}
+    from .episode import episode_files, read_bytes
+    check = episode_files(episode_dir)[0] / 'source-check.md'
+    if check.is_file() and not check.is_symlink():
+        match = re.findall(r'^SUMMARY:\s*(\d+)\s+problems?\s+in\s+(\d+)\s+segments?', read_bytes(check).decode('utf-8', 'replace'), re.M)
+        result['source_check'] = {'present': True, 'problems_reported': int(match[-1][0]) if match else None}
+        if match and int(match[-1][0]):
+            result['status'] = 'passed_with_open_source_problems'
+            result['notice_source_check'] = 'The separate fact-check report lists problems; confirm each was fixed and recorded in the review edits, then rerun the check.'
+        elif not match:
+            result['source_check']['note'] = 'No "SUMMARY: N problems in M segments" line found.'
+    elif require_source_check:
+        return {'status': 'blocked', 'reason': 'source-check.md missing; run the separate fact-check pass first'}
+    result['notice'] = 'The gate checks files and self-attested records. It does not verify sources, listen to audio or judge quality. Any dialogue edit changes the hashes and needs review again.'
+    return result
+
+
 TOOLS = {
+    'podcast_load_episode': ('Read an episode folder (NN-slug.txt segments with # title: and # paper:/# source: headers, SPEAKER: lines, optional meta.json) into reviewable segments. Local files only; nothing is run or sent.', {'episode_dir': {'type': 'string'}, 'require_sources': {'type': 'boolean'}}, ['episode_dir']),
+    'podcast_lint_episode': ('Mechanical spoken-word checks on an episode folder under an adjustable style profile (tags none/higgs, banned tags and phrases, spoken-number rule, disabled rules). Cannot judge accuracy or quality.', {'episode_dir': {'type': 'string'}, 'style': {'type': 'object'}, 'require_sources': {'type': 'boolean'}}, ['episode_dir']),
+    'podcast_preflight': ('Pre-production gate for an episode folder: lint must have no errors and editorial-review.json must match the exact current segment files; optionally require a separate source-check.md. Self-attested; verifies no claims.', {'episode_dir': {'type': 'string'}, 'style': {'type': 'object'}, 'require_sources': {'type': 'boolean'}, 'require_source_check': {'type': 'boolean'}}, ['episode_dir']),
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
     'podcast_check_pagecast_cast': ('Compare a complete PageCast passage list to the reviewed handoff speaker map. Requires matching caller-supplied source fingerprints and unchanged text status; does not change assignments or authenticate inputs.', {'assignments': {'type': 'array', 'minItems': 1, 'maxItems': 1000, 'items': {'type': 'object'}}, 'passages': {'type': 'array', 'minItems': 1, 'maxItems': 10000, 'items': {'type': 'object'}}, 'total': {'type': 'integer', 'minimum': 1, 'maximum': 10000}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['assignments', 'passages', 'total', 'expected_source_sha256', 'actual_source_sha256', 'source_text_status']),
     'podcast_mix_timeline': ('Mix 1–20 explicitly selected music beds over non-overlapping narration intervals into a private WAV. Times are milliseconds; optional explicit fades, no playback or automatic ducking.', {'narration_path': {'type': 'string'}, 'beds': {'type': 'array', 'minItems': 1, 'maxItems': 20, 'items': {'type': 'object', 'properties': {'music_path': {'type': 'string'}, 'start_ms': {'type': 'integer', 'minimum': 0}, 'end_ms': {'type': 'integer', 'minimum': 1}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'fade_in_ms': {'type': 'integer', 'minimum': 0}, 'fade_out_ms': {'type': 'integer', 'minimum': 0}}, 'required': ['music_path', 'start_ms', 'end_ms', 'music_db'], 'additionalProperties': False}}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'beds']),
@@ -167,7 +213,7 @@ def invoke(name, args):
             from .mix import mix, mix_timeline
             method = mix if name == 'podcast_mix' else mix_timeline
             return json.dumps(method(plugin_data_dir('podcast-studio'), **args))
-        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_check_pagecast_cast': check_pagecast_cast, 'podcast_show_notes': show_notes, 'podcast_caption_cues': caption_cues}[name](**args))
+        return json.dumps({'podcast_load_episode': load_episode_tool, 'podcast_lint_episode': lint_episode_tool, 'podcast_preflight': preflight_tool, 'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_check_pagecast_cast': check_pagecast_cast, 'podcast_show_notes': show_notes, 'podcast_caption_cues': caption_cues}[name](**args))
     except (TypeError, KeyError, ValueError, OSError, RuntimeError) as exc:
         return json.dumps({'error': str(exc)})
 

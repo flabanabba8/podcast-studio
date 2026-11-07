@@ -21,3 +21,5 @@
 - A synthetic silent narration with two different tone beds verified the selected intervals, a silent gap, and overlap rejection. No audio device or listening review was used.
 - The two-bed synthetic mix test also checks explicit fade-in and fade-out amplitudes and rejects fades longer than the bed. It does not establish perceptual quality.
 - A synthetic narration impulse was about 4.8 ms late with the limiter default; enabling FFmpeg latency compensation brought the tested onset within 2 ms. This is not a general synchronization or listening-quality guarantee.
+
+- 2026-11-07: added `podcast_load_episode`, `podcast_lint_episode` and `podcast_preflight` (episode folders, style-profile lint, kids preset, review-hash gate, optional source-check summary). Eight new fixture tests, 23 total, pass in the Hermes venv. Rules were ported from a production show's linter and have not been tuned on other formats. No audio, listening review, live service or Windows run.

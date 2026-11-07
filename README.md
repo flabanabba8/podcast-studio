@@ -48,3 +48,8 @@ same private-output, profile opt-in, source-size and timeout limits described
 above.
 
 Windows tests used synthetic media and did not verify Windows ACLs, perceptual quality, or real episodes. The Windows PageCast handoff was tested with a mocked provider, not live speech. Review the output directory’s access controls.
+
+
+## Episode folders, linting and the pre-audio gate
+
+`podcast_load_episode`, `podcast_lint_episode` and `podcast_preflight` work on a folder of `NN-slug.txt` segments (with `# title:` and `# paper:`/`# source:` headers and `SPEAKER: text` lines), an optional `meta.json`, `editorial-review.json` and a separate fact-check `source-check.md`. Lint rules come from a daily show's script linter but are a style profile you set per show: tag handling, banned tags and phrases, spoken-number rule, disabled rules, source requirement, and a `kids` preset (reading grade, sentence length, sensitive words, no spoken contact details). Lint and the review gate are mechanical and self-attested; they do not verify sources, listen to audio or judge quality. Any dialogue edit changes the file hashes and needs a fresh review.
