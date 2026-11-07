@@ -12,6 +12,16 @@ Example `podcast_check_script` input:
 
 After checking the sources and reviewing the complete segment, copy its returned `sha256` into a review entry and add nonempty `purpose`, `opening_check`, `source_check`, and `edits` notes. Send those entries in order with a `reviewer` to `podcast_check_review`. Re-run the review if the script or its source references change.
 
+After assigning speakers in PageCast, `podcast_check_pagecast_cast` compares the
+complete passage list with the handoff's paragraph-to-speaker map. Collect all
+`pagecast_book` pages for the same book revision, then supply its total,
+`book.source_hash`, `source_text_status`, the handoff `source_sha256` and
+assignments. Missing passage IDs or paragraphs, mismatched source hashes and
+changed or unavailable text baselines are rejected. Speaker mismatches are
+reported without changing them; at most 100 details are returned with an
+omitted count. The inputs are caller-supplied, not authenticated, and a match
+does not verify voices, source claims or changes after the check.
+
 `podcast_mix` requires local FFmpeg and ffprobe with the `alimiter` latency-compensation option and supported POSIX or Windows file locking (synthetic checks passed on Linux and Windows) and combines explicitly selected trusted narration and music files into a private 48 kHz stereo WAV. Music loops under the narration; `music_db` defaults to -18 dB and `voice_db` to 0 dB, with a peak limiter. It does not play audio, generate music, automatically duck or certify loudness. Each input is limited to 512 MiB and two hours; output is limited to 2 GiB, with a 120-second encode timeout. Selected active-profile plugin media requires `allow_profile_media`. Mixing may shift timing, so recheck passage captions against the final audio. Check the final mix, timing, metadata, source rights and any required voice/music attribution before sharing.
 
 Example `podcast_mix` arguments, using files you selected and have rights to use:

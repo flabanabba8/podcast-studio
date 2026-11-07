@@ -7,6 +7,21 @@ spec = importlib.util.spec_from_file_location('podcast', Path(__file__).resolve(
 p = importlib.util.module_from_spec(spec); spec.loader.exec_module(p)
 
 class PodcastTest(unittest.TestCase):
+ def test_pagecast_cast_requires_complete_pages_and_correct_speakers(self):
+  assignments=[{'paragraph':0,'speaker':'A','segment_index':0},{'paragraph':1,'speaker':'B','segment_index':0}]
+  passages=[{'id':0,'paragraph':0,'speaker':'A'},{'id':1,'paragraph':0,'speaker':'A'},{'id':2,'paragraph':1,'speaker':'B'}]
+  args={'assignments':assignments,'passages':passages,'total':3,'expected_source_sha256':'a'*64,'actual_source_sha256':'a'*64,'source_text_status':'unchanged'}
+  self.assertEqual(p.check_pagecast_cast(**args)['status'],'matched')
+  passages[1]['speaker']='B';result=p.check_pagecast_cast(**args)
+  self.assertEqual(result['status'],'mismatched');self.assertEqual(result['mismatches'][0]['passage_id'],1)
+  with self.assertRaisesRegex(ValueError,'every PageCast passage'):p.check_pagecast_cast(**{**args,'passages':passages[:-1]})
+  with self.assertRaisesRegex(ValueError,'Duplicate passage'):p.check_pagecast_cast(**{**args,'passages':[passages[0],passages[0],passages[2]]})
+  with self.assertRaisesRegex(ValueError,'different original'):p.check_pagecast_cast(**{**args,'actual_source_sha256':'b'*64})
+  with self.assertRaisesRegex(ValueError,'changed or its import baseline'):p.check_pagecast_cast(**{**args,'source_text_status':'unavailable'})
+  many=[{'id':i,'paragraph':0,'speaker':'B'} for i in range(101)]
+  result=p.check_pagecast_cast(**{**args,'assignments':assignments[:1],'passages':many,'total':101})
+  self.assertEqual((result['mismatch_count'],len(result['mismatches']),result['mismatches_omitted']),(101,100,1))
+
  def test_review_detects_any_script_or_source_change(self):
   segments = [{'title': 'A discovery', 'sources': ['Primary paper'], 'turns': [{'speaker': 'A', 'text': 'Here is the finding.'}]}]
   digest = p.check_script(segments)['segments'][0]['sha256']

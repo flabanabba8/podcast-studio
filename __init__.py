@@ -86,6 +86,37 @@ def show_notes(segments, starts):
             'notice': 'Times and source references are supplied by the caller, not verified against audio or source content.'}
 
 
+def check_pagecast_cast(assignments, passages, total, expected_source_sha256, actual_source_sha256, source_text_status):
+    if any(not isinstance(x, str) or not re.fullmatch(r'[0-9a-f]{64}', x) for x in (expected_source_sha256, actual_source_sha256)):
+        raise ValueError('Source fingerprints must be lowercase SHA-256')
+    if expected_source_sha256 != actual_source_sha256: raise ValueError('Book came from a different original source')
+    if source_text_status != 'unchanged': raise ValueError('PageCast text changed or its import baseline is unavailable; review the current script')
+    if not isinstance(assignments, list) or not 1 <= len(assignments) <= 1000:
+        raise ValueError('Provide the complete PageCast assignment map')
+    expected = {}
+    for row in assignments:
+        if not isinstance(row, dict) or type(row.get('paragraph')) is not int or row['paragraph'] < 0 or not isinstance(row.get('speaker'), str) or not row['speaker'].strip() or len(row['speaker']) > 80 or any(ord(c) < 32 for c in row['speaker']):
+            raise ValueError('Each assignment needs a paragraph and speaker')
+        if row['paragraph'] in expected: raise ValueError('Duplicate assignment paragraph')
+        expected[row['paragraph']] = row['speaker']
+    if list(expected) != list(range(len(expected))): raise ValueError('Assignment paragraphs must be complete and ordered from zero')
+    if type(total) is not int or not 1 <= total <= 10000 or not isinstance(passages, list) or len(passages) != total:
+        raise ValueError('Provide every PageCast passage from all pages')
+    seen, paragraphs, mismatches = set(), set(), []
+    for row in passages:
+        if not isinstance(row, dict) or type(row.get('id')) is not int or type(row.get('paragraph')) is not int or not isinstance(row.get('speaker'), str) or not row['speaker'].strip() or len(row['speaker']) > 80 or any(ord(c) < 32 for c in row['speaker']):
+            raise ValueError('Each passage needs its ID, paragraph and speaker')
+        ident, paragraph = row['id'], row['paragraph']
+        if ident in seen or paragraph not in expected: raise ValueError('Duplicate passage or unknown paragraph')
+        seen.add(ident); paragraphs.add(paragraph)
+        if row['speaker'] != expected[paragraph]:
+            mismatches.append({'passage_id': ident, 'paragraph': paragraph, 'expected_speaker': expected[paragraph], 'actual_speaker': row['speaker']})
+    if seen != set(range(total)) or paragraphs != set(expected): raise ValueError('PageCast passage or paragraph coverage is incomplete')
+    return {'status': 'matched' if not mismatches else 'mismatched', 'passages_checked': total,
+            'mismatch_count': len(mismatches), 'mismatches': mismatches[:100], 'mismatches_omitted': max(0, len(mismatches)-100),
+            'notice': 'All data and fingerprints are caller-supplied and not authenticated. This checks point-in-time assignments, not voice quality, source claims or changes after the check.'}
+
+
 def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, actual_source_sha256=None, source_text_status=None):
     if type(strip_higgs_tags) is not bool: raise ValueError('strip_higgs_tags must be boolean')
     if (expected_source_sha256 is None) != (actual_source_sha256 is None): raise ValueError('Provide both source fingerprints or neither')
@@ -119,6 +150,7 @@ def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, 
 
 TOOLS = {
     'podcast_check_script': ('Fingerprint ordered sourced dialogue segments and report basic counts. Does not verify claims.', {'segments': {'type': 'array'}}, ['segments']),
+    'podcast_check_pagecast_cast': ('Compare a complete PageCast passage list to the reviewed handoff speaker map. Requires matching caller-supplied source fingerprints and unchanged text status; does not change assignments or authenticate inputs.', {'assignments': {'type': 'array', 'minItems': 1, 'maxItems': 1000, 'items': {'type': 'object'}}, 'passages': {'type': 'array', 'minItems': 1, 'maxItems': 10000, 'items': {'type': 'object'}}, 'total': {'type': 'integer', 'minimum': 1, 'maximum': 10000}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['assignments', 'passages', 'total', 'expected_source_sha256', 'actual_source_sha256', 'source_text_status']),
     'podcast_mix_timeline': ('Mix 1–20 explicitly selected music beds over non-overlapping narration intervals into a private WAV. Times are milliseconds; optional explicit fades, no playback or automatic ducking.', {'narration_path': {'type': 'string'}, 'beds': {'type': 'array', 'minItems': 1, 'maxItems': 20, 'items': {'type': 'object', 'properties': {'music_path': {'type': 'string'}, 'start_ms': {'type': 'integer', 'minimum': 0}, 'end_ms': {'type': 'integer', 'minimum': 1}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'fade_in_ms': {'type': 'integer', 'minimum': 0}, 'fade_out_ms': {'type': 'integer', 'minimum': 0}}, 'required': ['music_path', 'start_ms', 'end_ms', 'music_db'], 'additionalProperties': False}}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'beds']),
     'podcast_mix': ('Mix explicitly selected narration and music files into a private WAV without audio playback. Music loops; no automatic ducking. Check rights and listen before sharing.', {'narration_path': {'type': 'string'}, 'music_path': {'type': 'string'}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'music_path']),
     'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['passages']),
@@ -135,7 +167,7 @@ def invoke(name, args):
             from .mix import mix, mix_timeline
             method = mix if name == 'podcast_mix' else mix_timeline
             return json.dumps(method(plugin_data_dir('podcast-studio'), **args))
-        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_show_notes': show_notes, 'podcast_caption_cues': caption_cues}[name](**args))
+        return json.dumps({'podcast_check_script': check_script, 'podcast_check_review': check_review, 'podcast_pagecast_plan': pagecast_plan, 'podcast_check_pagecast_cast': check_pagecast_cast, 'podcast_show_notes': show_notes, 'podcast_caption_cues': caption_cues}[name](**args))
     except (TypeError, KeyError, ValueError, OSError, RuntimeError) as exc:
         return json.dumps({'error': str(exc)})
 

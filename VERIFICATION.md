@@ -1,5 +1,7 @@
 # Verification
 
+- The PageCast cast check detects a wrong speaker, duplicate or missing passage coverage, source-hash mismatch and unavailable text baseline. A separate PageCast fixture split a long turn into multiple passages, reported mismatches before assignment and matched after all passages were assigned. Inputs remain caller-supplied and point-in-time; this does not verify voice quality or later edits.
+
 - The optional PageCast text-status handoff accepts a matching source and `unchanged` status, rejects `changed` and `unavailable`, and requires both source fingerprints when status is provided. A Linux PageCast/Podcast fixture and a native Windows text-only fixture exercised edits and missing baselines. Caller-supplied values are not independently authenticated; speaker assignments, speech and later edits still require review.
 - Mixed-case private-directory boundaries were checked using synthetic paths on Linux and native Windows; no real credentials were used.
 
