@@ -82,6 +82,11 @@ class MixTests(unittest.TestCase):
  def test_unsupported_platform_fails_before_file_access(self):
   with patch('podcast_mix_fixture.locking.fcntl', None), patch('podcast_mix_fixture.locking.msvcrt', None):
    with self.assertRaisesRegex(ValueError,'supported file locking'):mix(Path('/tmp/fixture'),'missing.wav','missing.wav')
+ def test_mixed_case_private_audio_paths_are_rejected(self):
+  with tempfile.TemporaryDirectory(dir='/tmp') as tmp:
+   for name in ('.CoDeX','.HeRmEs'):
+    folder=Path(tmp)/name;folder.mkdir();source=folder/'fixture.wav';source.write_bytes(b'fixture')
+    with self.assertRaises(ValueError):media(str(source),Path(tmp)/'plugin',False)
  def test_posix_lock_rejects_a_second_owner(self):
   from podcast_mix_fixture import locking
   if locking.fcntl is None:self.skipTest('POSIX-specific lock check')

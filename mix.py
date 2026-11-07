@@ -14,13 +14,13 @@ PRIVATE = {'.ssh', '.gnupg', '.aws', '.azure', '.codex', '.docker', '.kube', '.p
 def media(value, root, allow_profile_media):
     if not isinstance(value, str) or len(value) > 4096: raise ValueError('Choose an absolute local audio path')
     path = Path(value).expanduser()
-    if not path.is_absolute() or path.is_symlink() or any(x in PRIVATE - {'.hermes'} for x in path.parts):
+    if not path.is_absolute() or path.is_symlink() or any(x.casefold() in PRIVATE - {'.hermes'} for x in path.parts):
         raise ValueError('Choose a non-symlink audio file outside private configuration')
     original = path.parts; path = path.resolve(strict=True)
-    data = Path(root).resolve().parent; profile = data.parent if data.name == 'plugin-data' else None
+    data = Path(root).resolve().parent; profile = data.parent if data.name.casefold() == 'plugin-data' else None
     allowed = allow_profile_media and profile is not None and path.is_relative_to(data)
-    protected = '.hermes' in original or '.hermes' in path.parts or profile is not None and path.is_relative_to(profile)
-    if any(x in PRIVATE - {'.hermes'} for x in path.parts) or protected and not allowed or not path.is_file() or path.suffix.lower() not in ('.wav', '.mp3', '.m4a'):
+    protected = any(x.casefold() == '.hermes' for x in (*original, *path.parts)) or profile is not None and path.is_relative_to(profile)
+    if any(x.casefold() in PRIVATE - {'.hermes'} for x in path.parts) or protected and not allowed or not path.is_file() or path.suffix.lower() not in ('.wav', '.mp3', '.m4a'):
         raise ValueError('Unsupported or private audio file')
     if path.stat().st_size > 512 * 1024**2: raise ValueError('Audio source exceeds 512 MiB')
     return path
