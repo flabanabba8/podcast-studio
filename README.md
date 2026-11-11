@@ -1,5 +1,7 @@
 # Podcast Studio
 
+![Podcast Studio: source-first dialogue, review the current script](assets/thumbnail.jpg)
+
 Research and write a podcast from a topic, select compatible speech resources and assemble an episode with editorial review and optional music.
 
 **At a glance**
