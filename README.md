@@ -1,6 +1,21 @@
 # Podcast Studio
 
-A Hermes skill for source-first podcast production, with tools that fingerprint structured dialogue and check that a self-attested editorial review covers the current text. Inspired by the Breach Protocol editorial workflow, generalized to any show and voice cast. It does not generate speech, verify claims, or upload content; use a separately configured speech tool for production. No account or credentials are required.
+Research and write a podcast from a topic, select compatible speech resources and assemble an episode with editorial review and optional music.
+
+**At a glance**
+
+- **Install:** `hermes plugins install flabanabba8/podcast-studio`, then `hermes plugins enable podcast-studio`.
+- **Needs:** Hermes 0.22 or later. For spoken audio, either a speech server already running on your computer, or Gemini 3.8 Flash TTS through your own Google Cloud login (Application Default Credentials and a default gcloud project on your computer). FFmpeg for mixing. Page research can use an installed Camoufox browser; otherwise use your Hermes web tools.
+- **Internet:** Research pages are fetched through the tools you choose. If you use the Gemini voice route, each spoken line is sent to Google, costs money (a 0.50 USD spend guard is on by default) and uses your own Google Cloud login; the project is read from your machine configuration and is never shown or stored in the plugin. Nothing is uploaded or published.
+- **Limits:** Linux is the only platform checked. Hermes writes and checks the script; the plugin cannot verify that sources are true. The review checks are self-attested and mechanical. You should listen to the finished episode and check show notes and captions before sharing.
+- **Credits:** Voices come from the engine you choose; its terms apply. Any music you add must be music you have rights to use. Licence: GPL-3.0-or-later.
+- **AI assistance:** Written with AI coding assistants (Anthropic Claude and OpenAI Codex agents) under the maintainer's direction; what was actually tested is listed in VERIFICATION.md.
+
+Read the [setup/task guide](llmwiki/task-guide.md) and [skill](skills/create-podcast/SKILL.md) for the production workflow, resource choices and observable acceptance.
+
+## Supporting tools and detailed limits
+
+A Hermes skill for source-first podcast production, with tools that fingerprint structured dialogue and check that a self-attested editorial review covers the current text. Inspired by the Breach Protocol editorial workflow, generalized to any show and voice cast. Speech is produced with a selected external/native tool; these mechanical checks do not verify claims or upload content; use a separately configured speech tool for production. No account or credentials are required.
 
 Each segment contains `title`, `sources` (a list of references), and `turns` (speaker/text objects). `podcast_check_script` returns hashes; `podcast_check_review` compares a review against the ordered segment hashes and checks for substantive notes. Neither tool independently reads sources or certifies that a review took place. `podcast_show_notes` formats caller-supplied measured chapter starts and deduplicated source references without inspecting audio. `podcast_caption_cues` turns explicitly supplied, passage-timed PageCast text into draft cues, optionally removing Higgs delivery tags. For PageCast, pass the handoff and timeline fingerprints as `expected_source_sha256` and `actual_source_sha256`; a mismatch is rejected. You may also pass the timeline's `source_text_status`: `changed` and `unavailable` are rejected, while `unchanged` records a stronger point-in-time text comparison. Older PageCast books lack this baseline. The values are caller-supplied and not independently authenticated; neither comparison verifies speaker assignments or later changes. These cues are not a transcript or word-level alignment; listen and check the final video. After review, `podcast_pagecast_plan` produces import text and a paragraph-to-speaker and segment-index map for the optional PageCast Director plugin; assign all resulting passage IDs manually after inspecting them, because a turn may split into multiple passages. Compare the handoff `source_sha256` and PageCast text status before rendering and captioning. `pagecast_timeline` can report cached WAV passage boundaries; derive segment starts from the map and verify the final export timing. Update and review the structured script again after PageCast text edits.
 
@@ -53,3 +68,19 @@ Windows tests used synthetic media and did not verify Windows ACLs, perceptual q
 ## Episode folders, linting and the pre-audio gate
 
 `podcast_load_episode`, `podcast_lint_episode` and `podcast_preflight` work on a folder of `NN-slug.txt` segments (with `# title:` and `# paper:`/`# source:` headers and `SPEAKER: text` lines), an optional `meta.json`, `editorial-review.json` and a separate fact-check `source-check.md`. Lint rules come from a daily show's script linter but are a style profile you set per show: tag handling, banned tags and phrases, spoken-number rule, disabled rules, source requirement, and a `kids` preset (reading grade, sentence length, sensitive words, no spoken contact details). Lint and the review gate are mechanical and self-attested; they do not verify sources, listen to audio or judge quality. Any dialogue edit changes the file hashes and needs a fresh review.
+
+## 0.2.1 (2026-11-10): returning to earlier work, clearer research gates
+
+Found by real owned Hermes runs: a returning user could not continue an earlier project because no tool listed projects; a mistyped project ID silently saved nothing; error pages were saved as sources; and a script using `sources` instead of `source_ids` got a misleading error.
+- `podcast_project_status` with no `project_id` lists existing projects (ID, topic, phase, counts), newest first.
+- A wrong or mistyped project ID returns an error listing the existing IDs.
+- Pages with HTTP status 400 or above, and short pages that say "page not found", are not saved as sources (`page_unavailable`).
+- A factual section without `source_ids` gets a message naming the exact key.
+- Material from the Hermes profile cache is refused with a message saying to save it in the task folder or plugin data folder.
+- Camoufox reader: guard against the Playwright pageError crash, stdout isolation, and a hard deadline (see contest/maintenance/camoufox-reader-20261110).
+- Skill and wiki: plain-language rule and a three-source research rule.
+- Attaching the exact same file again (same SHA-256 and kind) reuses the existing material instead of adding a second copy (found when a returning session re-attached a take that was already in the project).
+
+## 0.3.0 (2026-11-10)
+
+- `podcast_narrate`: Gemini 3.8 Flash TTS (Vertex AI, Application Default Credentials) as a supported speech route. `podcast_start_topic` reports `gemini_speech` (availability or reason, 30 named voices with gender and trait). One request per spoken turn, named voice per speaker, 0.50 USD spend guard, usage returned, no retries, raw takes kept; the Google Cloud project is read from the machine configuration and never shown. The local-server how-to remains for other engines.

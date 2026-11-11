@@ -1,85 +1,24 @@
 ---
 name: create-podcast
-description: Research, write, review and produce a podcast of any format (news, research, interview, story, tutorial, commentary) with source-backed claims, an editorial gate before audio, and a repeatable episode folder.
+description: Research and write a podcast from a topic, select compatible speech resources and assemble an episode with editorial review and optional music.
 ---
 
-Make a podcast for the user's actual subject, audience and format. Nothing here assumes a news show, two hosts or a particular cast: pick the format first, then choose a style profile, a cast and a source policy that fit it. Everything is listener-first: the episode exists to serve the person listening, never to narrate how it was made.
+Read the [bundled wiki](../../llmwiki/index.md). Start from topic, audience, length and style. Use podcast_start_topic for a private working project. Research with available native search/browser tools or explicitly selected installed Camoufox via podcast_research_fetch. Camoufox uses a fresh anonymous browser; it reduces some browser friction but cannot guarantee access or facts. Add other legitimate sources with podcast_source_add; read source pages with podcast_source_read before writing.
 
-## 0. Choose the format and set the rules once
+The active host researches, reasons and writes the dialogue; podcast_write_script saves sourced sections and an episode folder. Check sources and perform the existing script/lint/editorial preflight. Choose any authorized speech system that can supply actual audio; attach one normalized mono16-bit PCM WAV per turn with podcast_material_add, then podcast_assemble_project. Optional podcast_mix/mix_timeline add a selected music bed. Listen, review final timing, prepare captions/show notes and keep source credits. Audio generation is selected separately; project creation or self-attested review is not a produced episode.
 
-Decide, and write down in the episode folder's `meta.json`: format (daily news brief, deep-dive on research, interview, narrative or fiction, tutorial, commentary, audiobook), cast and voices the user is allowed to use, and whether claims need sources. Then set the style profile you will pass to `podcast_lint_episode` and `podcast_preflight`:
+Speech default: when podcast_start_topic reports gemini_speech available, record with podcast_narrate (Gemini 3.8 Flash TTS): pass voice for one host, or voices as {speaker: voice} giving each speaker a clearly different named voice that fits the show (the list gives gender and trait). It makes one request per spoken turn (100 words or fewer), keeps raw takes, attaches them in order, keeps a 0.50 USD spend guard and returns usage; never look up or print the Google Cloud project. Speech costs money (cents for a short episode): before the first podcast_narrate call, say in plain chat which voice each host will get, how many requests it makes and the rough cost, and wait for the user's yes. podcast_assemble_project returns a timeline with every turn's speaker, voice, start and end second. Then call podcast_episode_files (optionally with output_dir set to the user's working folder): it writes show-notes.md (chapters with start times, hosts and voices, the sources cited), captions.srt and captions.vtt with the host name on every cue, and a timed transcript. Do not build show notes by hand; podcast_show_notes and podcast_caption_cues remain for custom use. The instructions below are for a speech server on this computer instead.
 
-- `tags`: `none` if the voice engine would read control tags aloud, `higgs` if it supports Higgs delivery tags.
-- `banned_tags`: delivery tags the user has heard and disliked, for example `style:whispering` or `ERIS:emotion:contemplation` (speaker prefix optional).
-- `banned_phrases`: the user's own tics and clichés. Add to this list whenever the user objects to a line.
-- `spoken_numbers`: `error` for news and research (bare statistics sound bad aloud), `off` for fiction, finance walkthroughs or anything where numbers are the point.
-- `disabled_rules`: switch off any rule that does not fit the format, such as `audience-ref` for a show that talks to "you" on purpose.
-- `require_sources`: true for factual formats; false for fiction, personal essays or improvised interviews.
+Research rule (every path): a search-result snippet is not a source. Open each page with podcast_research_fetch (the url is enough; it saves the page's whole text as a source in one step, so you never retype page text), or if a page is blocked take another page; podcast_source_add refuses a complete source under 1500 characters, pick at least three pages from DIFFERENT publishers (for example a university or vet school, a science news outlet, an encyclopedia, a museum), skip paywalled or blocked pages for a readable one, then read every source to the end with podcast_source_read before writing. In the answer list each source with the publisher and what you took from it.
 
-## 0b. Kids shows
+Fetch only pages whose title is plainly about the topic (a search can return unrelated papers); run podcast_lint_episode on the written script and fix any error by rewriting the script (turns of one or two words are rejected) before recording.
 
-For a children's show start with `style: {"preset": "kids"}` and then adjust. It turns off the rules that do not fit (spoken numbers, the audience-reference rule, one-word reactions), blocks spoken contact details, links and invitations to message or follow the show (this protects children from being steered to contact strangers), warns on sensitive words so you confirm the context, and warns when a segment's estimated reading grade (default 4) or sentence length (default 18 words) is above target. These are mechanical aids, not a child-safety review: a person still has to read the whole script for age-appropriateness, fear, manipulation, and anything a child could copy.
+podcast_write_script returns the estimated spoken length and advice; when it says to trim, rewrite the script (podcast_write_script again) BEFORE you ask the user to approve speech, so the user's only job is to say yes. After the user says yes, record, assemble and call podcast_episode_files in one go without being asked again, then show the user the sources, the voice of each host, the chapters and where the files are.
 
-- Pick the age band first (for example 3 to 5, 6 to 8). Write to it: short complete sentences, concrete things, one idea at a time, kind and honest characters, repetition where it helps learning.
-- Make-believe needs no sources; facts the show teaches (animals, science, history, safety) still do. Check them against a children's reference or a primary source and keep `# source:` headers for every factual segment. Do not teach something unsafe a child could imitate.
-- Do not clone or imitate a real child's voice, and do not use any real child's name, photo or personal details. Use only voices the user is authorized to use. Say which voices are synthetic if the platform asks.
-- YouTube requires every video to be set as made for kids or not, at the channel or video level, and a wrong setting can cause FTC or COPPA problems and platform action. Made-for-kids videos lose comments, the notification bell, personalized ads, end screens and similar features ([YouTube Help](https://support.google.com/youtube/answer/9527654)). Treat any kids show as made for kids unless you have checked the definition on YouTube's own help page. Check YouTube's current help pages for its altered-or-synthetic-content disclosure and its monetization rules for repetitive or mass-produced content before publishing a series; the summaries available while building this skill were from secondary sources and have not been checked against YouTube's own wording.
-- A series is not a template run: vary stories, characters' problems and the lessons so episodes are genuinely different.
+Conversation rule: a two-host episode is a real conversation, not two mini lectures. Give the hosts different names and personalities, open with a hook question, use 3 or 4 beats, short turns (mostly 8 to 25 words, none over 40), questions and reactions between the hosts, and a sign-off line. Aim for 12 to 20 turns and about 200 to 250 words (75 to 100 seconds spoken). After assembly, report the episode length from the assembled file.
 
-## 1. Research (factual formats): keep these methods
+Quick path, first time, speech server on this computer: if the user says a speech server is running on this computer (or a local one answers on http://localhost:8000), skip the resource interview; a loopback server costs nothing and sends nothing out. Follow these steps exactly, in one pass. FIRST list the working folder: if it has a voices folder with a sample WAV and a transcript, that sample is the host's voice and you must use it for every turn (clone it through `references`, below); the plain built-in voice is only for when no sample exists. The script must have at least 3 sections and at least 6 separate host turns, each turn 60 words or fewer (the server rejects longer requests), so you make one request per turn, about 6 to 10 takes in all. Save the full text you actually fetched from each page as the source text, and add each source ONCE with podcast_source_add. Then call podcast_source_read on every source, starting at offset 0 and continuing page after page until read_to equals the source's characters (podcast_project_status shows both numbers); podcast_write_script refuses to write a factual section until every source it cites is read to the end, and a source added twice has to be read twice. Only then call podcast_write_script, citing source IDs, before you record any speech. Steps: podcast_start_topic; fetch and read at least three real sources (native search/fetch, or podcast_research_fetch) before writing; write a short two-voice or one-host script of 6 to 10 turns of 60 words or fewer each, every factual section citing the source IDs you read; podcast_write_script; then record each turn exactly once: no rerolls, no retries.
 
-1. **Gather and scan.** Collect candidates from the show's real sources (papers, official posts, filings, transcripts, community reaction). Judge each on community signal, novelty, whether it connects to the others, whether it can be explained in conversation, and subfield balance. Choose the set that fits the format, not a fixed number.
-2. **Find the thread only if it is real.** A theme must emerge from the sources; never impose one. No theme is a valid outcome.
-3. **Read primary sources in full.** Never write about a paper, announcement or talk from an abstract, title, blurb or memory. Fetch and read the whole text (arXiv HTML, a transcript, the original article). Before relying on an ID or link, confirm it resolves to the right title. Summaries from earlier rounds or other tools are leads, not sources. Bot-walled pages need a stealth fetcher; a page you could not read is a gap you state, not a source you cite.
-4. **Keep an append-only dossier.** One file per episode where each research round appends a dated section: item, verified primary link, the real mechanism or result, expert and community reception, and verification status. Never overwrite earlier rounds. Each round should go deeper or wider than the last: full-source reads of the most significant items, sweeps of source clusters not yet covered, adversarial checks of the shakiest claims against a primary source, and gap-filling for important things missing.
-5. **Separate what is confirmed from what is claimed.** Announcement, allegation, observed result and interpretation are different things; attribute disputed claims.
-6. **Never fabricate.** If a number, quote, date or detail cannot be supported, remove it or say it is unknown.
+How to record with a local or user-selected HTTP speech endpoint (no plugin tool is needed): list what it offers with GET {base}/v1/models and GET {base}/v1/audio/voices. Then, for each turn in order, POST {base}/v1/audio/speech with JSON {"model": <id from /v1/models>, "input": <turn text>, "voice": "default" (keep "default" even when cloning), "response_format": "wav", "stream": false}; run one request at a time and wait for each reply. A server that clones voices also takes "references": [{"audio_path": <voice sample WAV as a data:audio/wav;base64,... URI>, "text": <the exact words spoken in that sample>}]. If the user keeps a voices folder next to their files, the sample WAV and its transcript text file are there, and the transcript is what the SAMPLE says, not your script. Save each reply in a takes folder in the working folder, one file per turn (takes/turn-01.wav, takes/turn-02.wav and so on; never overwrite one file), then normalize with ffmpeg to mono 16-bit PCM at one sample rate for all turns (-ac 1 -ar 24000 -c:a pcm_s16le). Check each file with ffprobe, attach them in turn order with podcast_material_add (kind "audio", section_index = the zero-based number of the section that turn belongs to; attach in turn order, exactly one WAV per turn, because assembly refuses a section whose WAV count differs from its turn count), run podcast_assemble_project, verify the episode file with ffprobe, and end the answer with the sources you used, the episode length and where the files are. Do not claim a listening review.
 
-## 2. Write the episode folder
-
-One text file per story or chapter, named so filename order is running order: `01-short-slug.txt`, `02-...`, then a closing file such as `98-wrapup.txt`. Each file starts with headers:
-
-```
-# title: The chapter title as it will appear in the chapter list
-# paper: https://primary-source-url
-```
-
-(`# source:` works too, and a file may list several.) Spoken lines are `SPEAKER: text`; untagged lines continue the previous turn. Only a wrap-up, outro or credits file may have no source header in a factual show. There is no separate opener file: begin with the first story itself. `meta.json` can hold title, platform title, blurb and cover concept.
-
-## 3. Write for the ear
-
-- State the subject and what happened in the first sentence, then the setting, who did what and in what order, before any opinion. A person arriving at a chapter boundary should know the topic.
-- Introduce each term when it is needed, in ordinary words. Pronouns need clear referents.
-- Describe results by what they let a system or person do. Do not read statistics aloud; say what the number means in felt terms. Name the actual action behind an abstraction.
-- Give every speaker complete thoughts. No finishing each other's sentences, no directing the co-host ("walk us through it"), no praise fillers, no agreement-only turns, no forced humor, no manufactured disagreement or excitement. Reactions must say something specific and be at least a short phrase.
-- Length follows the explanation. No padding, no minimum runtime, and no quota for jokes, cameos or recaps.
-- Close with a short, genuine pointer to the sources and a specific invitation to respond if the show wants one.
-- For a non-news format (story, interview, tutorial), keep the same discipline of clarity and listener value, and loosen only the rules the style profile turns off.
-
-## 4. Gates before any audio
-
-1. Run `podcast_lint_episode` with the style profile and fix every error. Warnings are for judgment, not mechanical replacement.
-2. Do a **separate fact-check pass** that does not edit: compare every specific claim (names, dates, numbers, quotes, who did what, what the method and result actually were, caveats) with the sources and write `source-check.md` with `OK` and `PROBLEM` lines per segment, ending `SUMMARY: N problems in M segments`. The editor who fixes the script may be unable to open the sources, so each problem quotes the script text, says what the source says, and recommends the fix.
-3. Read the whole script in order as spoken text, cold, without titles or notes. Check comprehension, accuracy, delivery tags and humor. Then write `editorial-review.json`:
-
-```
-{"status": "passed", "reviewer": "who actually did it",
- "segments": {"01-slug.txt": {"sha256": "...", "purpose": "...", "opening_check": "...", "source_check": "...", "edits": "..."}}}
-```
-
-Each hash is the SHA-256 of that exact file. Record real cuts and corrections; never write a review that did not happen, and never claim someone listened to audio that has not been generated.
-4. Run `podcast_preflight` (add `require_source_check` for factual shows). It blocks on lint errors, a missing or stale review, and reports open source-check problems. Any dialogue edit changes the hashes and requires review again. Do not synthesize audio past a blocked gate.
-
-## 5. Voices and audio
-
-Use only voices the user is authorized to use. Hosted or local speech engines cost money or hardware; say which one you are using and what it will cost before rendering. Use `podcast_pagecast_plan` and PageCast for casting, locked voices and resumable renders; compare the handoff with `podcast_check_pagecast_cast` and timing fingerprints. Keep delivery tags out of captions (`strip_higgs_tags`). A tagged expressiveness pass after the editorial review needs its own check and a fresh review record.
-
-Mix with `podcast_mix` or `podcast_mix_timeline`: music is a separate bed with explicit start, end, fade and gain; beds bridge pauses between segments; one loudness target for the finished file: pass `loudness_lufs` (about -16 is common for spoken word); the tool is a one-pass approximation and reports the measured `integrated_lufs`, so confirm it. Check rights for any music. Listen before sharing: matching hashes and passing checks say nothing about how it sounds.
-
-## 6. Chapters, captions and notes
-
-Use measured segment start times with `podcast_show_notes` for chapter labels and deduplicated source references, and `podcast_caption_cues` for passage-timed draft captions. Each story is one chapter. Show notes and captions come from the script, not from the audio, so confirm timing by playing it.
-
-## 7. Report honestly
-
-State which gates passed, which claims were verified against which sources, what remains unverified, and what nobody has listened to. Do not call an episode ready because the files are consistent.
+Start from the user's intended result. Reuse known resource choices; ask missing questions only in ordinary chat. Establish hardware, available local/remote tools, subscriptions versus verified API entitlements, privacy, acceptable waiting time and maximum API spend (zero is valid). Prefer free paths that meet quality needs. A subscription does not prove API access. Save non-secret choices in the private task, never credentials. Do not silently install/download, upload private inputs, switch providers or spend money. Reason/write in the active host; no secondary reasoning API or agent worker. Images are inspected/generated/edited directly in the MAIN session using native tools. Preserve accepted work, pauses and original inputs. Publishing requires separate explicit authorization.

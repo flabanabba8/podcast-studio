@@ -25,3 +25,29 @@
 - 2026-11-07: added `podcast_load_episode`, `podcast_lint_episode` and `podcast_preflight` (episode folders, style-profile lint, kids preset, review-hash gate, optional source-check summary). Eight new fixture tests, 23 total, pass in the Hermes venv. Rules were ported from a production show's linter and have not been tuned on other formats. No audio, listening review, live service or Windows run.
 - 2026-11-07: read-only parity run on 14 real Breach Protocol episode folders (2026-09-13 to 2026-11-06): the new lint reported the same error counts as the show's own linter on every one (2, 1 and zero on the rest; the show's extra benchmark-name warning is not ported), loaded all files and speakers, and `podcast_preflight` passed the 2026-11-06 news folder against its real, hash-bound review. Nothing was written to those folders.
 - 2026-11-07: `podcast_mix` and `podcast_mix_timeline` accept `loudness_lufs` (-30 to -10) and always report the measured `integrated_lufs`. A quiet synthetic mix measured below -30 LUFS and the same mix with a -16 target measured within 2.5 LU of it (24 tests pass). One-pass loudnorm is approximate; no real speech or music, no listening.
+
+## 2026-11-10 maintained scope revision
+
+Twenty-four existing offline/mocked tests pass; shared workbench tests additionally exercise real WAV assembly and changed-material rejection. The chosen Camoufox/Playwright installation crashed on page-error handling during a real Nikon fetch and hit its bounded timeout. No fallback, private-runtime modification or successful fetch is claimed. Hermes admission and retirement preflight pass; detailed local receipts are retained in the contest maintenance evidence. Old evidence above keeps its original scope.
+
+## 0.2.1 (2026-11-10): returning to earlier work, clearer research gates
+
+Found by real owned Hermes runs: a returning user could not continue an earlier project because no tool listed projects; a mistyped project ID silently saved nothing; error pages were saved as sources; and a script using `sources` instead of `source_ids` got a misleading error.
+- `podcast_project_status` with no `project_id` lists existing projects (ID, topic, phase, counts), newest first.
+- A wrong or mistyped project ID returns an error listing the existing IDs.
+- Pages with HTTP status 400 or above, and short pages that say "page not found", are not saved as sources (`page_unavailable`).
+- A factual section without `source_ids` gets a message naming the exact key.
+- Material from the Hermes profile cache is refused with a message saying to save it in the task folder or plugin data folder.
+- Camoufox reader: guard against the Playwright pageError crash, stdout isolation, and a hard deadline (see contest/maintenance/camoufox-reader-20261110).
+- Skill and wiki: plain-language rule and a three-source research rule.
+
+Checks for 0.2.1 (2026-11-10): 27 offline tests pass; tools/check-plugin-workflows.py ok on the package; offline dry check on a copy of a real earlier project: list projects, attach four narration WAVs from a task folder, assemble (54.0 s). Live runs were done in the maintainer's own private workspace.
+- Attaching the exact same file again (same SHA-256 and kind) reuses the existing material instead of adding a second copy (found when a returning session re-attached a take that was already in the project).
+
+## Skill text, 2026-11-10
+
+Added a first-time quick path and a direct how-to for recording through a local or user-selected HTTP speech endpoint. Text only; no code changed.
+
+## 0.3.0 (2026-11-10)
+
+Mocked-transport tests (tests/test_gemini_route.py): two speakers with different voices, one request per turn, resume without rerolls, voice checks before any request, spend guard, route reported at topic start, episode assembles from the takes. 31 tests pass. No live Gemini request.

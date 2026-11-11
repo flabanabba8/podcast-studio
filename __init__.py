@@ -142,7 +142,11 @@ def caption_cues(passages, strip_higgs_tags=False, expected_source_sha256=None, 
         text = text.strip()
         if not text or len(text) > 4000 or any(c in text for c in ('\r', '\u0085', '\u2028', '\u2029')) or '-->' in text or re.search(r'\n[ \t]*\n', text) or any(ord(c) < 32 and c != '\n' for c in text):
             raise ValueError('Passage text cannot form a valid caption cue')
-        cues.append({'start': start, 'end': end, 'text': text})
+        speaker = item.get('speaker')
+        if speaker is not None and (not isinstance(speaker, str) or not speaker.strip() or len(speaker) > 80 or any(ord(c) < 32 for c in speaker)): raise ValueError('A passage speaker must be a printable name of at most 80 characters')
+        cue = {'start': start, 'end': end, 'text': text}
+        if speaker is not None: cue.update(speaker=speaker.strip(), label=speaker.strip() + ': ' + text)
+        cues.append(cue)
         last = end
     binding = 'matched_original_import_and_unchanged_text' if source_text_status == 'unchanged' else 'matched_original_import' if expected_source_sha256 is not None else 'not_checked'
     return {'cues': cues, 'source_binding': binding, 'notice': 'Caller-supplied fingerprints and text status are not independently authenticated; without a text status, an import-hash match does not detect later edits. Text status does not cover speaker assignments. Caption text is supplied script, not a speech transcript; passage-level timing is approximate. Listen, check final media timing and review all captions.'}
@@ -199,7 +203,7 @@ TOOLS = {
     'podcast_check_pagecast_cast': ('Compare a complete PageCast passage list to the reviewed handoff speaker map. Requires matching caller-supplied source fingerprints and unchanged text status; does not change assignments or authenticate inputs.', {'assignments': {'type': 'array', 'minItems': 1, 'maxItems': 1000, 'items': {'type': 'object'}}, 'passages': {'type': 'array', 'minItems': 1, 'maxItems': 10000, 'items': {'type': 'object'}}, 'total': {'type': 'integer', 'minimum': 1, 'maximum': 10000}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['assignments', 'passages', 'total', 'expected_source_sha256', 'actual_source_sha256', 'source_text_status']),
     'podcast_mix_timeline': ('Mix 1–20 explicitly selected music beds over non-overlapping narration intervals into a private WAV. Times are milliseconds; optional explicit fades, no playback or automatic ducking.', {'narration_path': {'type': 'string'}, 'beds': {'type': 'array', 'minItems': 1, 'maxItems': 20, 'items': {'type': 'object', 'properties': {'music_path': {'type': 'string'}, 'start_ms': {'type': 'integer', 'minimum': 0}, 'end_ms': {'type': 'integer', 'minimum': 1}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'fade_in_ms': {'type': 'integer', 'minimum': 0}, 'fade_out_ms': {'type': 'integer', 'minimum': 0}}, 'required': ['music_path', 'start_ms', 'end_ms', 'music_db'], 'additionalProperties': False}}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'loudness_lufs': {'type': 'number', 'minimum': -30, 'maximum': -10}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'beds']),
     'podcast_mix': ('Mix explicitly selected narration and music files into a private WAV without audio playback. Music loops; no automatic ducking. Check rights and listen before sharing.', {'narration_path': {'type': 'string'}, 'music_path': {'type': 'string'}, 'music_db': {'type': 'number', 'minimum': -30, 'maximum': 0}, 'voice_db': {'type': 'number', 'minimum': -12, 'maximum': 0}, 'loudness_lufs': {'type': 'number', 'minimum': -30, 'maximum': -10}, 'allow_profile_media': {'type': 'boolean'}}, ['narration_path', 'music_path']),
-    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['passages']),
+    'podcast_caption_cues': ('Prepare passage-timed draft caption cues from explicitly supplied PageCast timeline text. Text is script, not verified speech; no word-level timing.', {'passages': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object', 'properties': {'start_seconds': {'type': 'number'}, 'end_seconds': {'type': 'number'}, 'text': {'type': 'string'}, 'speaker': {'type': 'string'}}, 'required': ['start_seconds', 'end_seconds', 'text']}}, 'strip_higgs_tags': {'type': 'boolean'}, 'expected_source_sha256': {'type': 'string'}, 'actual_source_sha256': {'type': 'string'}, 'source_text_status': {'type': 'string', 'enum': ['unchanged', 'changed', 'unavailable']}}, ['passages']),
     'podcast_show_notes': ('Prepare chapter labels and deduplicated source references from caller-supplied measured start times; does not inspect audio or verify sources.', {'segments': {'type': 'array'}, 'starts': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}, ['segments', 'starts']),
     'podcast_pagecast_plan': ('Prepare reviewed dialogue for optional PageCast import with an explicit paragraph-to-speaker map. Does not render audio.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
     'podcast_check_review': ('Check a supplied full editorial review covers the current exact segments. Review is self-attested.', {'segments': {'type': 'array'}, 'review': {'type': 'object'}}, ['segments', 'review']),
@@ -208,6 +212,12 @@ TOOLS = {
 
 def invoke(name, args):
     try:
+        from .media_project import MediaProject, schemas
+        project_tools=schemas('podcast')
+        if name in project_tools:
+            from plugins.plugin_storage import plugin_data_dir
+            project=MediaProject(plugin_data_dir('podcast-studio'),'podcast')
+            return json.dumps(getattr(project,project_tools[name][3])(**args))
         if name in ('podcast_mix', 'podcast_mix_timeline'):
             from plugins.plugin_storage import plugin_data_dir
             from .mix import mix, mix_timeline
@@ -219,6 +229,9 @@ def invoke(name, args):
 
 
 def register(ctx):
+    from .media_project import schemas
+    for tool_name,(description,properties,required,method) in schemas('podcast').items():
+        ctx.register_tool(name=tool_name,toolset='podcast_studio',schema={'name':tool_name,'description':description,'parameters':{'type':'object','properties':properties,'required':required,'additionalProperties':False}},handler=lambda args,_name=tool_name,**kw:invoke(_name,args))
     ctx.register_skill('create-podcast', Path(__file__).parent / 'skills/create-podcast/SKILL.md', description='Develop a source-backed podcast with an editorial review before production.')
     for name, (description, properties, required) in TOOLS.items():
         ctx.register_tool(name=name, toolset='podcast_studio', schema={'name': name, 'description': description, 'parameters': {'type': 'object', 'properties': properties, 'required': required, 'additionalProperties': False}}, handler=lambda args, _name=name, **kw: invoke(_name, args))

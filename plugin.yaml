@@ -1,10 +1,20 @@
 name: podcast-studio
-version: "0.1.0"
-description: "Develop source-backed podcasts with review checks, timed captions and local music mixing."
+version: "0.3.0"
+description: "Research and write podcasts from a topic, choose speech resources, assemble actual audio and review sources and timing."
 author: "Podcast Studio contributors"
 license: GPL-3.0-or-later
 requires_hermes: ">=0.22.0"
 provides_tools:
+  - podcast_start_topic
+  - podcast_research_fetch
+  - podcast_source_add
+  - podcast_source_read
+  - podcast_write_script
+  - podcast_material_add
+  - podcast_narrate
+  - podcast_assemble_project
+  - podcast_episode_files
+  - podcast_project_status
   - podcast_load_episode
   - podcast_lint_episode
   - podcast_preflight

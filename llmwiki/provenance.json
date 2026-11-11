@@ -1,0 +1,79 @@
+{
+  "curated": "2026-11-10",
+  "status": "source reviewed; focused tests recorded in repository maintenance evidence, not new production/backend acceptance",
+  "sources": [
+    {
+      "package_path": "README.md",
+      "sha256": "5ad7444d39902e4538ba1db19511b7b8b9a95bd07e32f7628051dd96e31753bc"
+    },
+    {
+      "package_path": "VERIFICATION.md",
+      "sha256": "69a85ef10885f6f650d7764f137a8fe596005d602a7b171c7f4e01abd110168b"
+    },
+    {
+      "package_path": "__init__.py",
+      "sha256": "280c1b481e7a099c726b8af59171c28926447992227df63f5bf629960c86ce81"
+    },
+    {
+      "package_path": "browser_research.py",
+      "sha256": "58f4ae1a31faf4927e6d17e344de08643bb247c42b8b8785023b9d31009c0a31"
+    },
+    {
+      "package_path": "episode.py",
+      "sha256": "df555ce1086b8e344df53ab3cca4edc15db25fb27ccb241b32dab352f48a29d3"
+    },
+    {
+      "package_path": "lint.py",
+      "sha256": "fb6a48fb2d41431556c8f38f53da2dc01a417e1bc3261140de6bc42d20a4ad16"
+    },
+    {
+      "package_path": "locking.py",
+      "sha256": "202a1dd8ae71120c2ed49ec41c03ea0294bcf3ec06526138e5c3ee8c57a2cb08"
+    },
+    {
+      "package_path": "media_project.py",
+      "sha256": "274cfd19a24e53b1ef4475b2b47bccf50a10c4b5cf1a0ac9de81430741bd2f79"
+    },
+    {
+      "package_path": "mix.py",
+      "sha256": "5c2a3acd163176237509d657a8af0ad7451d8e3a5ac0fd297b2965ee019b4b8e"
+    },
+    {
+      "package_path": "plugin.yaml",
+      "sha256": "35dbb0d44cb01082df9852329aa3a95560742a307f314c4bd8316d5f2989b32b"
+    },
+    {
+      "package_path": "skills/create-podcast/SKILL.md",
+      "sha256": "641b1f5420635f58be6d970889e27bcbeb613ed6fa4d2d7f0e3b75ace2c5cee6"
+    },
+    {
+      "package_path": "tests/test_episode.py",
+      "sha256": "3d5bb40aa70ac1550300341072fd92a63006968a00b715a8f91309349adeb6dd"
+    },
+    {
+      "package_path": "tests/test_mix.py",
+      "sha256": "3950a38ce28ee720ac4e824bbdc37570326de2453ecce1ed19c09ef970f1fdb3"
+    },
+    {
+      "package_path": "tests/test_podcast.py",
+      "sha256": "314fc31015fea9bc9303ac053b5fc02fe3dc18b83223fd0ae73fa8191b14a847"
+    }
+  ],
+  "quality_review": {
+    "date": "2026-11-10",
+    "method": "main-session source/contract review; actual registration capture; focused offline/mocked tests recorded separately",
+    "scope": [
+      "setup choices",
+      "worked task flow",
+      "failure diagnosis",
+      "acceptance limits",
+      "schema alignment"
+    ],
+    "live_scope": "No new production pipeline, model build, paid speech, install or publication. ModLab UM/REA help calls exercised actual installed CLIs."
+  },
+  "privacy_scope": {
+    "credentials_read": false,
+    "selected_installed_runtime_source_inspected_read_only": true,
+    "private_installs_modified": false
+  }
+}

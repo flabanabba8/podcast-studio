@@ -1,10 +1,11 @@
 import importlib.util
+import sys
 import json
 from pathlib import Path
 import unittest
 
 spec = importlib.util.spec_from_file_location('podcast', Path(__file__).resolve().parents[1] / '__init__.py')
-p = importlib.util.module_from_spec(spec); spec.loader.exec_module(p)
+p = importlib.util.module_from_spec(spec); sys.modules[spec.name] = p; spec.loader.exec_module(p)
 
 class PodcastTest(unittest.TestCase):
  def test_pagecast_cast_requires_complete_pages_and_correct_speakers(self):
